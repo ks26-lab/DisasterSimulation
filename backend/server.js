@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { ElasticSearchService }
-from './elastic-service.js';
+from './services/elastic-service.js';
 
 const app = express();
 

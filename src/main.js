@@ -3,12 +3,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import {
     observeSnapshot
 }
-from "./geminiService.js";
-
-import {
-    ElasticSearchService
-}
-from "./elastic-service.js";
+from "./services/geminiService.js";
 
 // =====================
 // Viewer
@@ -972,10 +967,6 @@ const historicalAgent =
 // =====================
 
 
-    const elasticService =
-    new ElasticSearchService();
-
-
 
 // =====================
 // Main Simulation Loop
@@ -1137,16 +1128,6 @@ const agentReport =
             disasterState,
             observationReport
         );
-if (observationReport.events.length > 0) {
-
-    await elasticService.store(
-        agentReport
-    );
-
-    console.log(
-        "REPORT SAVED TO ELASTIC"
-    );
-}
 const historicalSearchReport =
     historicalAgent
         .processReport(
@@ -1319,4 +1300,3 @@ if (
     }
 );
 
-const similarRecords =
