@@ -1,71 +1,34 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { ElasticSearchService }
-from './services/elastic-service.js';
+import disasterRoutes from './routes/disasterRoutes.js';
+import debugRoutes from './routes/debugRoutes.js';
+import { SERVER } from './config/index.js';
 
 const app = express();
-
-const elasticService =
-    new ElasticSearchService();
 
 app.use(cors());
 app.use(express.json());
 
-app.post(
-    '/store-report',
-    async (req, res) => {
+app.get('/health', (_req, res) => {
+    res.json({
+        success: true,
+        service: 'disaster-response-agent-backend',
+        timestamp: new Date().toISOString(),
+    });
+});
 
-        try {
+app.use('/', disasterRoutes);
+app.use('/debug', debugRoutes);
 
-            const result =
-                await elasticService.store(
-                    req.body
-                );
+app.use((err, _req, res, _next) => {
+    console.error('[unhandled-error]', err);
+    res.status(500).json({
+        success: false,
+        error: err.message ?? 'Internal server error',
+    });
+});
 
-            res.json(result);
-
-        } catch (error) {
-
-            console.error(error);
-
-            res.status(500).json({
-                error:
-                    error.message
-            });
-        }
-    }
-);
-
-app.post(
-    '/search-disasters',
-    async (req, res) => {
-
-        try {
-
-            const result =
-                await elasticService.search(
-                    req.body
-                );
-
-            res.json(result);
-
-        } catch (error) {
-
-            console.error(error);
-
-            res.status(500).json({
-                error:
-                    error.message
-            });
-        }
-    }
-);
-
-app.listen(
-    3000,
-    () =>
-        console.log(
-            'Server running on port 3000'
-        )
-);
+app.listen(SERVER.port, () => {
+    console.log(`Disaster response backend running on port ${SERVER.port}`);
+});
