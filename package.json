@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node backend/server.js",
+    "start:legacy": "node server.js",
+    "create:disaster-index": "node backend/scripts/createDisasterIndex.js",
+    "create:outcomes-index": "node backend/scripts/createOutcomesIndex.js"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^9.4.2",

@@ -1,5 +1,5 @@
 import { ElasticSearchService }
-from "./elastic-service.js";
+from "/Users/umikasood/DisasterSimulation/backend/services/elastic-service.js";
 
 const elasticService =
     new ElasticSearchService();
