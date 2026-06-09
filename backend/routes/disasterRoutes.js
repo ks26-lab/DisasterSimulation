@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { ElasticSearchService } from '../services/elastic-service.js';
-import { OrchestratorAgent } from '../agents/orchestratorAgent.js';
-import { CounterfactualAgent } from '../agents/counterfactualAgent.js';
+import { OrchestratorAgent } from '../agents/cognitive/orchestratorAgent.js';
+import { CounterfactualAgent } from '../agents/cognitive/counterfactualAgent.js';
 import { KnowledgeGapDetector } from '../services/knowledgeGapDetector.js';
 import { DependencyDiscoveryService } from '../services/dependencyDiscoveryService.js';
 import { OperationalIntelligenceService } from '../services/operationalIntelligenceService.js';
