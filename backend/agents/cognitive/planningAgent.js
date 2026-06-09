@@ -1,4 +1,4 @@
-import { GeminiService } from '../services/geminiService.js';
+import { GeminiService } from '../../services/geminiService.js';
 
 /**
  * Generates structured disaster response plans using Gemini reasoning.

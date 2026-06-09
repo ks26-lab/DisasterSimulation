@@ -1,4 +1,4 @@
-import { GeminiService } from '../services/geminiService.js';
+import { GeminiService } from '../../services/geminiService.js';
 
 /**
  * Agent that learns from previous disaster reports, plans, and outcomes.

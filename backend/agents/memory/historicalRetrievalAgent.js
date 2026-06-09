@@ -1,11 +1,11 @@
-import { SEARCH_WEIGHTS, AGENTS } from '../config/index.js';
+import { SEARCH_WEIGHTS, AGENTS } from '../../config/index.js';
 
 /**
  * Retrieves ranked historical disasters similar to a current observation report.
  */
 export class HistoricalRetrievalAgent {
     /**
-     * @param {import('../services/elastic-service.js').ElasticSearchService} elasticService
+     * @param {import('../../services/elastic-service.js').ElasticSearchService} elasticService
      */
     constructor(elasticService) {
         this.elasticService = elasticService;

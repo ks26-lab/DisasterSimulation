@@ -1,6 +1,6 @@
-import { ElasticSearchService } from './backend/services/elastic-service.js';
-import { OperationalIntelligenceService } from './backend/services/operationalIntelligenceService.js';
-import { ContradictionAnalysisService } from './backend/services/contradictionAnalysisService.js';
+import { ElasticSearchService } from '../backend/services/elastic-service.js';
+import { OperationalIntelligenceService } from '../backend/services/operationalIntelligenceService.js';
+import { ContradictionAnalysisService } from '../backend/services/contradictionAnalysisService.js';
 
 async function runTests() {
     console.log('Testing Operational Intelligence Layer...');

@@ -1,5 +1,5 @@
-import { GeminiService } from '../services/geminiService.js';
-import { ElasticSearchService } from '../services/elastic-service.js';
+import { GeminiService } from '../../services/geminiService.js';
+import { ElasticSearchService } from '../../services/elastic-service.js';
 
 /**
  * Agent that performs counterfactual analysis (hindsight analysis) on disaster outcomes.

@@ -1,14 +1,7 @@
 import * as Cesium from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
-import {
-    observeSnapshot
-}
-from "./geminiService.js";
 
-import {
-    ElasticSearchService
-}
-from "./elastic-service.js";
+
 
 // =====================
 // Viewer
@@ -38,40 +31,6 @@ const geminiObservationDisplay =
         "geminiObservation"
     );
 
-const testSnapshot = {
-
-    environment: {
-        waterLevel: 150,
-        riskLevel: "CRITICAL"
-    },
-
-    population: {
-        affectedPopulation: 1000
-    },
-
-    recovery: {
-        active: false
-    }
-};
-
-observeSnapshot(testSnapshot)
-    .then(response => {
-
-        console.log(
-            "GEMINI TEST"
-        );
-
-        console.log(response);
-
-    })
-    .catch(error => {
-
-        console.error(
-            "GEMINI ERROR",
-            error
-        );
-
-    });
 
 const waterDisplay =
     document.getElementById("waterDisplay");
@@ -972,8 +931,7 @@ const historicalAgent =
 // =====================
 
 
-    const elasticService =
-    new ElasticSearchService();
+ 
 
 
 
@@ -1130,6 +1088,9 @@ console.log(
     observationAgent.observe(
         disasterState
     );
+    geminiObservationDisplay
+    .textContent =
+    "Backend Gemini integration pending";
 
 const agentReport =
     observationAgent
@@ -1137,52 +1098,14 @@ const agentReport =
             disasterState,
             observationReport
         );
-if (observationReport.events.length > 0) {
-
-    await elasticService.store(
-        agentReport
-    );
-
-    console.log(
-        "REPORT SAVED TO ELASTIC"
-    );
-}
-const historicalSearchReport =
-    historicalAgent
-        .processReport(
-            agentReport
-        );
-
-     const response =
-    await fetch(
-        "http://localhost:3000/search-disasters",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type":
-                    "application/json"
-            },
-            body:
-                JSON.stringify(
-                    historicalSearchReport
-                )
-        }
-    );
-
-const similarRecords =
-    await response.json();
-    
-console.log(
-    "SIMILAR RECORDS"
-);
 
 console.log(
-    JSON.stringify(
-        similarRecords,
-        null,
-        2
-    )
+    "Historical analysis temporarily disabled during architecture stabilization"
 );
+
+geminiObservationDisplay
+    .textContent =
+    "Backend integrations temporarily disabled";
 console.log(
     "HISTORICAL SEARCH REPORT"
 );
@@ -1194,10 +1117,7 @@ console.log(
         2
     )
 );
-        const searchRequest =
-    historicalAgent.processReport(
-    agentReport
-);
+        
 
 console.log(
     "AGENT REPORT"
@@ -1210,32 +1130,9 @@ console.log(
         2
     )
 );
-    if (
-    observationReport.events.length > 0 &&
-    !geminiBusy
-) {
+     
 
-    geminiBusy = true;
 
-    observeSnapshot(snapshot)
-        .then(response => {
-
-            geminiObservationDisplay
-                .textContent =
-                response;
-
-        })
-        .catch(error => {
-
-            console.error(error);
-
-        })
-        .finally(() => {
-
-            geminiBusy = false;
-
-        });
-}
 trendDisplay.textContent =
     observationReport.trend;
 
@@ -1318,5 +1215,3 @@ if (
                 .toLocaleString();
     }
 );
-
-const similarRecords =

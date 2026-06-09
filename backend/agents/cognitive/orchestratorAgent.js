@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { ElasticSearchService } from '../services/elastic-service.js';
-import { HistoricalRetrievalAgent } from './historicalRetrievalAgent.js';
+import { ElasticSearchService } from '../../services/elastic-service.js';
+import { HistoricalRetrievalAgent } from '../memory/historicalRetrievalAgent.js';
 import { PlanningAgent } from './planningAgent.js';
 import { LearningAgent } from './learningAgent.js';
 import { ReflectionAgent } from './reflectionAgent.js';
-import { KnowledgeGapDetector } from '../services/knowledgeGapDetector.js';
-import { DependencyDiscoveryService } from '../services/dependencyDiscoveryService.js';
-import { OperationalIntelligenceService } from '../services/operationalIntelligenceService.js';
+import { KnowledgeGapDetector } from '../../services/knowledgeGapDetector.js';
+import { DependencyDiscoveryService } from '../../services/dependencyDiscoveryService.js';
+import { OperationalIntelligenceService } from '../../services/operationalIntelligenceService.js';
 
 /**
  * Coordinates the full disaster-response agent workflow end to end.
