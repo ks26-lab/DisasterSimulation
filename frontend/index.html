@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRIS // Disaster Response Intelligence System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-canvas: #1E232A;
+    --bg-panel: #252B35;
+    --bg-panel-alt: #2D3540;
+    --border-color: #3F4A5C;
+    --border: 1px solid var(--border-color);
+    
+    --text-nominal: #F1F5F9;
+    --text-muted: #64748B;
+    
+    --accent-success: #10B981;
+    --accent-warning: #F59E0B;
+    --accent-alert: #EF4444;
+    
+    --font: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-canvas);
+    color: var(--text-nominal);
+    font-family: var(--font);
+    font-size: 16px; /* Increased 15% from 14px */
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Layout */
+  .shell {
+    display: grid;
+    grid-template-rows: 64px 1fr;
+    grid-template-columns: 1fr;
+    height: 100vh;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: var(--border);
+    background: var(--bg-panel);
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .logo {
+    font-size: 18px; /* Increased */
+    font-weight: 700;
+    color: var(--text-nominal);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--text-muted); }
+
+  .system-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 0;
+    background: var(--accent-success);
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .clock { color: var(--text-nominal); font-weight: 600; }
+
+  /* Nav tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: 32px;
+  }
+
+  .nav-tab {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .nav-tab:hover { color: var(--text-nominal); border-color: var(--border-color); }
+  .nav-tab.active { color: var(--text-nominal); border-color: var(--border-color); background: var(--bg-panel-alt); }
+
+  /* Main content area */
+  .main {
+    display: grid;
+    grid-template-columns: 380px 1fr 340px;
+    overflow: hidden;
+  }
+
+  /* Panels */
+  .panel {
+    border-right: var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-panel);
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: var(--border);
+    background: var(--bg-panel-alt);
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 13px; /* Increased */
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-nominal);
+  }
+
+  .panel-badge {
+    font-size: 12px; /* Increased */
+    padding: 2px 8px;
+    border: 1px solid currentColor;
+    border-radius: 0;
+  }
+
+  .badge-amber { color: var(--accent-warning); }
+  .badge-cyan { color: var(--text-nominal); }
+  .badge-emerald { color: var(--accent-success); }
+  .badge-crimson { color: var(--accent-alert); }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  /* Terminal input */
+  .terminal-block {
+    background: var(--bg-canvas);
+    border: var(--border);
+    border-left: 2px solid var(--text-muted);
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .terminal-block label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .terminal-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-nominal);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    padding: 4px 0;
+  }
+
+  .terminal-input::placeholder { color: var(--text-muted); }
+
+  .terminal-select {
+    width: 100%;
+    background: var(--bg-canvas);
+    border: var(--border);
+    color: var(--text-nominal);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 6px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .terminal-select option { background: var(--bg-canvas); }
+
+  /* Payload editor */
+  .payload-editor {
+    width: 100%;
+    background: var(--bg-canvas);
+    border: var(--border);
+    border-left: 2px solid var(--text-muted);
+    color: var(--text-nominal);
+    font-family: var(--font);
+    font-size: 14px;
+    padding: 12px;
+    resize: vertical;
+    min-height: 160px;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  /* Severity slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .slider-label {
+    font-size: 13px;
+    color: var(--text-muted);
+    width: 130px;
+    flex-shrink: 0;
+  }
+
+  input[type=range] {
+    flex: 1;
+    appearance: none;
+    height: 4px;
+    background: var(--border-color);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 0;
+    background: var(--text-nominal);
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-size: 14px;
+    color: var(--text-nominal);
+    width: 44px;
+    text-align: right;
+  }
+
+  /* Command buttons */
+  .cmd-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .cmd-btn {
+    padding: 14px 10px;
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid;
+    background: var(--bg-canvas);
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cmd-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .cmd-btn:hover::after { opacity: 0.1; }
+  .cmd-btn:active::after { opacity: 0.2; }
+
+  .cmd-btn-amber { color: var(--text-nominal); border-color: var(--text-muted); }
+  .cmd-btn-cyan { color: var(--accent-success); border-color: var(--accent-success); }
+  .cmd-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Agent graph area */
+  .graph-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg-canvas);
+  }
+
+  #agent-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Center panel tabs */
+  .center-tabs {
+    display: flex;
+    border-bottom: var(--border);
+    background: var(--bg-panel-alt);
+    flex-shrink: 0;
+  }
+
+  .center-tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: var(--font);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .center-tab:hover { color: var(--text-nominal); }
+  .center-tab.active { color: var(--text-nominal); border-bottom-color: var(--text-nominal); }
+
+  .center-view { display: none; flex: 1; overflow: hidden; background: var(--bg-canvas); }
+  .center-view.active { display: flex; flex-direction: column; }
+
+  /* Historical matches */
+  .match-card {
+    border: var(--border);
+    border-left: 2px solid var(--text-muted);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    background: var(--bg-panel);
+    cursor: pointer;
+    transition: border-left-color 0.15s;
+  }
+
+  .match-card:hover { border-left-color: var(--text-nominal); }
+  .match-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .match-title { font-size: 14px; font-weight: 600; color: var(--text-nominal); }
+  .match-score { font-size: 14px; color: var(--text-muted); font-weight: 600; }
+  
+  .decay-bar-container { margin: 8px 0; }
+  .decay-bar-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .decay-bar { height: 4px; background: var(--bg-canvas); position: relative; border: 1px solid var(--border-color); }
+  .decay-fill { height: 100%; background: var(--text-muted); transition: width 0.5s; }
+  .decay-fill.aged { background: var(--accent-alert); }
+
+  /* Counterfactual */
+  .cf-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .cf-lane {
+    border: var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-panel);
+  }
+
+  .cf-lane-header {
+    padding: 10px 14px;
+    border-bottom: var(--border);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: var(--bg-panel-alt);
+    color: var(--text-nominal);
+  }
+
+  .cf-lane-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-nominal);
+  }
+
+  .cf-gate-warning {
+    margin: 10px;
+    padding: 12px;
+    border: 1px solid var(--accent-alert);
+    background: var(--bg-canvas);
+    font-size: 13px;
+    color: var(--accent-alert);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: none;
+  }
+
+  .cf-gate-warning.active { display: block; }
+
+  /* Infrastructure cascade */
+  .cascade-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: var(--text-nominal);
+    position: relative;
+  }
+
+  .cascade-node::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+
+  .cascade-node.active::before { background: var(--accent-alert); }
+  .cascade-node.warning::before { background: var(--accent-warning); }
+  .cascade-node.ok::before { background: var(--accent-success); }
+  .cascade-indent { padding-left: 24px; }
+  .cascade-edge { margin-left: 4px; padding-left: 16px; border-left: 1px dashed var(--border-color); }
+
+  /* ES Index grid */
+  .index-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .index-cell { border: var(--border); padding: 12px; cursor: pointer; transition: all 0.15s; background: var(--bg-canvas); }
+  .index-cell:hover { border-color: var(--text-nominal); background: var(--bg-panel-alt); }
+  .index-cell.selected { border-color: var(--text-nominal); background: var(--bg-panel-alt); }
+  .index-name { font-size: 13px; font-weight: 600; color: var(--text-nominal); margin-bottom: 4px; word-break: break-all; }
+  .index-count { font-size: 14px; color: var(--text-muted); }
+  .index-count span { color: var(--text-nominal); font-weight: 600; }
+
+  /* JSON viewer */
+  .json-viewer {
+    background: var(--bg-canvas);
+    border: var(--border);
+    border-left: 2px solid var(--text-muted);
+    padding: 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-y: auto;
+    max-height: 350px;
+    color: var(--text-nominal);
+  }
+
+  .json-key { color: var(--text-muted); }
+  .json-str { color: var(--accent-success); }
+  .json-num { color: var(--text-nominal); }
+  .json-bool { color: var(--accent-alert); }
+  .json-null { color: var(--text-muted); }
+
+  /* Loading / running state */
+  .running-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg-panel-alt);
+    border-bottom: 1px solid var(--text-muted);
+    font-size: 13px;
+    color: var(--text-nominal);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .running-banner.active { display: flex; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid transparent;
+    border-top-color: var(--text-nominal);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fallback banner */
+  .fallback-banner {
+    display: none;
+    padding: 20px;
+    border: 1px solid var(--accent-warning);
+    background: var(--bg-canvas);
+    font-size: 14px;
+    color: var(--accent-warning);
+    line-height: 1.8;
+    margin: 14px;
+  }
+  .fallback-banner.active { display: block; }
+
+  /* Plan block */
+  .plan-block {
+    border: var(--border);
+    border-left: 2px solid var(--accent-success);
+    padding: 16px;
+    margin-bottom: 12px;
+    background: var(--bg-panel);
+  }
+  .plan-block-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-success);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .plan-block-content { font-size: 14px; color: var(--text-nominal); line-height: 1.8; }
+
+  /* Mock toggle */
+  .mock-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+  .toggle-switch { position: relative; width: 36px; height: 18px; }
+  .toggle-switch input { display: none; }
+  .toggle-track { position: absolute; inset: 0; background: var(--bg-canvas); border: 1px solid var(--border-color); border-radius: 0; transition: background 0.2s; }
+  .toggle-thumb { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: var(--text-muted); border-radius: 0; transition: transform 0.2s, background 0.2s; }
+  .toggle-switch input:checked ~ .toggle-track { background: var(--bg-panel-alt); }
+  .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(18px); background: var(--text-nominal); }
+
+  /* Metrics / Divider */
+  .divider { border: none; border-top: 1px solid var(--border-color); margin: 16px 0; }
+  .metric-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+  .metric-key { font-size: 13px; color: var(--text-muted); }
+  .metric-val { font-size: 14px; font-weight: 600; color: var(--text-nominal); }
+
+  .micro-bar { height: 4px; background: var(--bg-canvas); margin: 6px 0 10px; border: 1px solid var(--border-color); }
+  .micro-bar-fill { height: 100%; background: var(--text-muted); transition: width 0.6s; }
+
+  /* Agent Traces Container */
+  .agent-trace {
+    border: var(--border);
+    margin-bottom: 12px;
+    background: var(--bg-canvas);
+  }
+  .agent-trace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: var(--border);
+    cursor: pointer;
+  }
+  .agent-trace-name { font-size: 14px; font-weight: 600; }
+  .agent-trace-body { padding: 12px 16px; font-size: 13px; line-height: 1.8; color: var(--text-nominal); display: none; }
+  .agent-trace-body.open { display: block; }
+  .trace-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  .trace-key { color: var(--text-muted); flex-shrink: 0; width: 130px; }
+  .trace-val { color: var(--text-nominal); word-break: break-all; }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo">DRIS<span>//</span>CMD</div>
+      <div class="system-status">
+        <div class="status-dot"></div>
+        <span>SYSTEM NOMINAL</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('ops')">OPS CENTER</button>
+        <button class="nav-tab" onclick="switchView('memory')">MEMORY AUDIT</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <label class="mock-toggle" title="Toggle mock data">
+        <label class="toggle-switch">
+          <input type="checkbox" id="mock-toggle" checked onchange="toggleMock(this.checked)">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <span>MOCK DATA</span>
+      </label>
+      <span>BACKEND: <span style="color:var(--text-nominal)" id="backend-url">localhost:3000</span></span>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- MAIN AREA -->
+  <main class="main" id="main-ops">
+
+    <!-- LEFT PANEL: Telemetry Input -->
+    <aside class="panel" id="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">// Telemetry Input Deck</span>
+        <span class="panel-badge badge-amber">FEED ACTIVE</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="section-label">General Parameters</div>
+        <div class="terminal-block">
+          <label>Location</label>
+          <input type="text" class="terminal-input" value="Bengaluru" id="loc" onchange="syncPayload()">
+        </div>
+        <div class="terminal-block" style="display:inline-block; width: 48%; margin-right: 2%;">
+          <label>Disaster Type</label>
+          <select class="terminal-select" id="disaster-type" onchange="syncPayload()">
+            <option value="FLOOD" selected>FLOOD</option>
+            <option value="EARTHQUAKE">EARTHQUAKE</option>
+            <option value="CYCLONE">CYCLONE</option>
+          </select>
+        </div>
+        <div class="terminal-block" style="display:inline-block; width: 48%;">
+          <label>Severity</label>
+          <select class="terminal-select" id="severity" onchange="syncPayload()">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM">MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL" selected>CRITICAL</option>
+          </select>
+        </div>
+
+        <div class="section-label">Infrastructure Summary</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+          <div class="terminal-block" style="margin:0">
+            <label>Hospital Status</label>
+            <select class="terminal-select" id="infra-hospital" onchange="syncPayload()">
+              <option value="STABLE">STABLE</option>
+              <option value="UNSTABLE" selected>UNSTABLE</option>
+              <option value="OFFLINE">OFFLINE</option>
+            </select>
+          </div>
+          <div class="terminal-block" style="margin:0">
+            <label>School Status</label>
+            <select class="terminal-select" id="infra-school" onchange="syncPayload()">
+              <option value="STABLE" selected>STABLE</option>
+              <option value="UNSTABLE">UNSTABLE</option>
+              <option value="OFFLINE">OFFLINE</option>
+            </select>
+          </div>
+          <div class="terminal-block" style="margin:0">
+            <label>Bridge Status</label>
+            <select class="terminal-select" id="infra-bridge" onchange="syncPayload()">
+              <option value="CLEAR">CLEAR</option>
+              <option value="FLOODED" selected>FLOODED</option>
+              <option value="DAMAGED">DAMAGED</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-label">Severity Metrics</div>
+        <div class="slider-row">
+          <span class="slider-label">Ops Risk (%)</span>
+          <input type="range" min="0" max="100" value="85" id="ops-risk" oninput="updateSlider('ops-risk-val',this.value);syncPayload()">
+          <span class="slider-val" id="ops-risk-val">85</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Water Lvl (m)</span>
+          <input type="range" min="0" max="10" step="0.1" value="4.2" id="water-level" oninput="updateSlider('water-level-val',this.value);syncPayload()">
+          <span class="slider-val" id="water-level-val">4.2</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Rain Trend</span>
+          <select class="terminal-select" style="flex:1" id="rain-trend" onchange="syncPayload()">
+            <option value="DECREASING">DECREASING</option>
+            <option value="STABLE">STABLE</option>
+            <option value="INCREASING" selected>INCREASING</option>
+          </select>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Pop Affected</span>
+          <input type="range" min="0" max="50000" step="100" value="12500" id="pop-aff" oninput="updateSlider('pop-aff-val',this.value);syncPayload()">
+          <span class="slider-val" id="pop-aff-val">12500</span>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Raw Payload // observationReport</div>
+        <textarea class="payload-editor" id="payload-editor" spellcheck="false"></textarea>
+
+        <div class="cmd-split">
+          <button class="cmd-btn cmd-btn-amber" onclick="runAgent('agent')" id="btn-legacy">
+            ▶ /run-agent
+          </button>
+          <button class="cmd-btn cmd-btn-cyan" onclick="runAgent('full')" id="btn-full">
+            ⚡ /run-full-workflow
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <div class="panel" style="border-right:none">
+
+      <div class="running-banner" id="running-banner">
+        <div class="spinner"></div>
+        <span id="running-text">PIPELINE EXECUTING — AWAITING AGENT HANDOFF...</span>
+      </div>
+      
+      <div class="fallback-banner" id="signal-error-banner" style="margin:0; border-bottom:var(--border);">
+        [SIGNAL STABILITY LOW - INSUFFICIENT HISTORICAL CONTEXT. RECOVERY matrix DEPLOYED: FALLBACK CONFIDENCE DEFAULTS TO 0.5]
+      </div>
+
+      <div class="center-tabs">
+        <button class="center-tab active" onclick="switchCenterTab('graph')">AGENT GRAPH</button>
+        <button class="center-tab" onclick="switchCenterTab('plan')">RESPONSE PLAN</button>
+        <button class="center-tab" onclick="switchCenterTab('counterfactual')">COUNTERFACTUAL</button>
+      </div>
+
+      <!-- Agent Graph -->
+      <div class="center-view active" id="view-graph">
+        <div class="graph-container">
+          <canvas id="agent-canvas"></canvas>
+        </div>
+      </div>
+      
+      <!-- Response plan -->
+      <div class="center-view" id="view-plan">
+        <div style="flex:1;overflow-y:auto;padding:16px" id="plan-content">
+          <div class="fallback-banner active" style="display:block">
+            [NO PLAN GENERATED — SUBMIT TELEMETRY TO INITIATE PIPELINE]
+          </div>
+        </div>
+      </div>
+
+      <!-- Counterfactual -->
+      <div class="center-view" id="view-counterfactual">
+        <div style="padding:12px 16px;border-bottom:var(--border);font-size:13px;color:var(--text-muted);background:var(--bg-panel-alt); display:flex; justify-content:space-between; align-items:center;">
+          <span>QUALITY GATE: 0.6</span>
+          <button class="cmd-btn cmd-btn-amber" style="padding:6px 12px" onclick="runCounterfactual()">RUN HINDSIGHT</button>
+        </div>
+        <div id="cf-gate-warn" class="cf-gate-warning">
+          [CRITICAL TIMELINE WARNING: ALTERNATE OUTCOME DROPPED BELOW ETHICAL PERSISTENCE GATE]
+        </div>
+        <div class="cf-compare" style="padding:12px">
+          <div class="cf-lane">
+            <div class="cf-lane-header" style="color:var(--text-nominal)">◈ ACTUAL TIMELINE</div>
+            <div class="cf-lane-body" id="cf-actual">—</div>
+          </div>
+          <div class="cf-lane">
+            <div class="cf-lane-header" style="color:var(--text-nominal)">◇ COUNTERFACTUAL PATH</div>
+            <div class="cf-lane-body" id="cf-alternate">—</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: Dashboard -->
+    <aside class="panel" style="border-right:none;border-left:var(--border)">
+      <div class="panel-header">
+        <span class="panel-title">// Intelligence & Lineage</span>
+        <span class="panel-badge badge-cyan" id="trace-status">IDLE</span>
+      </div>
+      <div class="panel-body">
+        
+        <div class="section-label">Confidence Attribution</div>
+        <canvas id="confidence-canvas" width="280" height="220" style="display:block;margin:0 auto;"></canvas>
+
+        <hr class="divider">
+        <div class="section-label">Dependency Cascade Tree</div>
+        <div id="cascade-container" style="margin-top:10px">
+          <div style="font-size:13px;color:var(--text-muted)">NO DATA</div>
+        </div>
+        
+        <hr class="divider">
+        <div class="section-label">Event Context</div>
+        <div id="agent-traces-container"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MEMORY AUDIT VIEW (hidden by default) -->
+  <div id="main-memory" style="display:none;flex:1;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr;height:100%;gap:0">
+      <div class="panel" style="border-right:var(--border)">
+        <div class="panel-header">
+          <span class="panel-title">// 14-Index Elasticsearch Memory</span>
+          <span class="panel-badge badge-cyan">AUDITOR</span>
+        </div>
+        <div class="panel-body">
+          <div class="section-label">Index Registry</div>
+          <div class="index-grid" id="index-grid"></div>
+        </div>
+      </div>
+      <div class="panel" style="border-right:none">
+        <div class="panel-header">
+          <span class="panel-title">// Index Inspector</span>
+          <span class="panel-badge badge-emerald" id="inspector-idx-label">SELECT INDEX</span>
+        </div>
+        <div class="panel-body">
+          <div id="index-docs-container">
+            <div class="fallback-banner active">
+              SELECT AN INDEX TO INSPECT STORED PAYLOADS
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =====================
+// STATE & CONFIG
+// =====================
+let mockEnabled = true;
+let currentResult = null;
+let agentStates = {};
+let selectedIndex = null;
+let edgeLatencies = {};
+
+const BACKEND = 'http://localhost:3000';
+
+const ES_INDICES = [
+  'disaster-reports','disaster-outcomes','disaster-plans','strategy-memory',
+  'counterfactual-memory','dependency-memory','knowledge-gap-memory',
+  'causal-memory','novel-event-memory','recommendation-memory',
+  'evidence-reliability-memory','memory-conflict-resolution',
+  'decision-lineage-memory','emerging-risks'
+];
+
+const AGENTS = [
+  { id: 'orchestrator', label: 'Orchestrator', x: 0.15, y: 0.5 },
+  { id: 'historical', label: 'Historical', x: 0.4, y: 0.2 },
+  { id: 'learning', label: 'Learning', x: 0.4, y: 0.8 },
+  { id: 'planning', label: 'Planning', x: 0.65, y: 0.5 },
+  { id: 'reflection', label: 'Reflection', x: 0.85, y: 0.5 },
+  { id: 'counterfactual', label: 'Counterfactual', x: 0.85, y: 0.85 },
+];
+
+const EDGES = [
+  ['orchestrator','historical', 'retrievalFinished', 'retrievalStarted'],
+  ['orchestrator','learning', '', ''],
+  ['orchestrator','planning', 'planningStarted', 'retrievalFinished'],
+  ['planning','reflection', 'reflectionFinished', 'planningStarted'],
+  ['reflection','counterfactual', '', '']
+];
+
+// =====================
+// MOCK DATA
+// =====================
+const MOCK_RESULT = {
+  eventId: "MOCK-EVT-123",
+  generatedPlan: {
+    summary: 'Mock Plan: Deploy NDRF teams to Bengaluru.',
+    priorityLevel: 'CRITICAL',
+    recommendedActions: [
+      'Evacuate affected population of 12,500.',
+      'Deploy pontoon bridges to flooded zones.',
+      'Reroute hospital emergency grid.'
+    ],
+    rationale: 'High operational risk (85%) dictates immediate triage of critical infrastructure.'
+  },
+  workflowTrace: {
+    retrievalStarted: new Date(Date.now() - 5000).toISOString(),
+    retrievalFinished: new Date(Date.now() - 4500).toISOString(),
+    planningStarted: new Date(Date.now() - 4000).toISOString(),
+    reflectionFinished: new Date(Date.now() - 2000).toISOString()
+  },
+  overallConfidence: 0.78,
+  confidenceBreakdown: {
+    strategyWeight: 0.85,
+    evidenceWeight: 0.65,
+    dependencyWeight: 0.82
+  },
+  affectedSystems: [
+    { source: "Grid Interruption", target: "Pump Station Offline", estimatedImpactScore: 0.9 },
+    { source: "Pump Station Offline", target: "Hospital Power Loss", estimatedImpactScore: 0.75 }
+  ],
+  historicalMatches: [{ id: "HIST-01", similarity: 0.8 }]
+};
+
+const MOCK_CF_RESULT = {
+  estimatedImpactScore: 0.55,
+  confidenceRanking: 0.52,
+  actual: "Delayed response by 6 hours resulted in hospital evacuation.",
+  alternate: "Pre-positioning generators would have preserved hospital grid functionality.",
+  reasoning: "Generators reduce secondary cascade failure."
+};
+
+// =====================
+// CLOCK
+// =====================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toISOString().replace('T',' ').substring(0,19)+' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// =====================
+// PAYLOAD SYNC
+// =====================
+function syncPayload() {
+  const payload = buildPayload();
+  document.getElementById('payload-editor').value = JSON.stringify(payload, null, 2);
+}
+
+function buildPayload() {
+  return {
+    location: document.getElementById('loc').value,
+    disasterType: document.getElementById('disaster-type').value,
+    severity: document.getElementById('severity').value,
+    infrastructureSummary: {
+      hospitalStatus: document.getElementById('infra-hospital').value,
+      schoolStatus: document.getElementById('infra-school').value,
+      bridgeStatus: document.getElementById('infra-bridge').value
+    },
+    severityMetrics: {
+      operationalRisk: parseInt(document.getElementById('ops-risk').value),
+      waterLevel: parseFloat(document.getElementById('water-level').value),
+      rainfallTrend: document.getElementById('rain-trend').value,
+      affectedPopulation: parseInt(document.getElementById('pop-aff').value)
+    }
+  };
+}
+
+function updateSlider(valId, val) {
+  document.getElementById(valId).textContent = val;
+}
+
+// =====================
+// CANVAS — AGENT GRAPH
+// =====================
+let canvas, ctx;
+let animFrame = 0;
+
+function initCanvas() {
+  canvas = document.getElementById('agent-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  drawAgentGraph();
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+
+function getNodePos(agent) {
+  return { x: agent.x * canvas.width, y: agent.y * canvas.height };
+}
+
+function getAgentState(id) {
+  return agentStates[id] || 'idle';
+}
+
+function getStateColor(state) {
+  const colors = { idle: '#4B5563', computing: '#38BDF8', success: '#10B981', warning: '#EF4444' };
+  return colors[state] || '#4B5563';
+}
+
+function drawAgentGraph() {
+  if (!canvas || !ctx) return;
+  animFrame++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Edges
+  EDGES.forEach(([from, to, tEnd, tStart]) => {
+    const a = AGENTS.find(ag => ag.id === from);
+    const b = AGENTS.find(ag => ag.id === to);
+    if (!a || !b) return;
+    const pa = getNodePos(a), pb = getNodePos(b);
+
+    const stateA = getAgentState(from);
+    const stateB = getAgentState(to);
+    const computing = stateA === 'computing' || stateB === 'computing';
+    const active = stateA !== 'idle' && stateB !== 'idle';
+    
+    // Draw Edge
+    ctx.strokeStyle = computing ? (animFrame % 20 < 10 ? '#38BDF8' : '#4B5563') : (active ? '#10B981' : '#3F4A5C');
+    ctx.lineWidth = active ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+
+    // Latency text
+    const edgeKey = from + '-' + to;
+    if (edgeLatencies[edgeKey]) {
+      const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+      ctx.fillStyle = '#64748B';
+      ctx.font = '12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(edgeLatencies[edgeKey] + 'ms', mx, my - 8);
+    }
+  });
+
+  // Nodes
+  AGENTS.forEach(agent => {
+    const pos = getNodePos(agent);
+    const state = getAgentState(agent.id);
+    const color = getStateColor(state);
+    const R = 32;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.fillStyle = '#252B35';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if(state === 'computing') {
+      ctx.strokeStyle = '#38BDF8';
+      ctx.setLineDash([4, 4]);
+      ctx.lineDashOffset = -animFrame * 0.5;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, R+4, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = state === 'idle' ? '#64748B' : '#F1F5F9';
+    ctx.font = '700 13px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(agent.label.toUpperCase(), pos.x, pos.y + R + 22);
+  });
+
+  requestAnimationFrame(drawAgentGraph);
+}
+
+// =====================
+// RADAR & RENDERERS
+// =====================
+function drawConfidenceRadar(data) {
+  const c = document.getElementById('confidence-canvas');
+  if(!c) return;
+  const x = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const cx = W / 2, cy = H / 2 + 10;
+  const R = 75;
+  x.clearRect(0, 0, W, H);
+
+  // map new backend values
+  const segments = [
+    { label: 'STRATEGY MEM', value: data.strategyWeight || 0.5, color: '#F1F5F9' },
+    { label: 'EVIDENCE REL', value: data.evidenceWeight || 0.5, color: '#64748B' },
+    { label: 'DEP SUPPORT', value: data.dependencyWeight || 0.5, color: '#10B981' },
+  ];
+
+  [0.25, 0.5, 0.75, 1.0].forEach(r => {
+    x.strokeStyle = '#3F4A5C';
+    x.lineWidth = 1;
+    x.beginPath();
+    x.arc(cx, cy, R * r, 0, Math.PI * 2);
+    x.stroke();
+  });
+
+  let startAngle = -Math.PI / 2;
+  const arc = (Math.PI * 2) / segments.length;
+  segments.forEach(seg => {
+    const outerR = R * seg.value;
+    const innerR = R * 0.3;
+
+    x.strokeStyle = '#252B35';
+    x.lineWidth = (R - innerR);
+    x.beginPath();
+    x.arc(cx, cy, (R + innerR) / 2, startAngle, startAngle + arc);
+    x.stroke();
+
+    x.strokeStyle = seg.color;
+    x.lineWidth = (outerR - innerR);
+    x.beginPath();
+    x.arc(cx, cy, (outerR + innerR) / 2, startAngle, startAngle + arc);
+    x.stroke();
+
+    const midAngle = startAngle + arc / 2;
+    const lx = cx + Math.cos(midAngle) * (R + 25);
+    const ly = cy + Math.sin(midAngle) * (R + 25);
+    x.fillStyle = seg.color;
+    x.font = '12px JetBrains Mono';
+    x.textAlign = lx < cx ? 'right' : 'left';
+    x.fillText(seg.label, lx, ly - 4);
+    x.fillText(Math.round(seg.value * 100) + '%', lx, ly + 10);
+
+    startAngle += arc;
+  });
+}
+
+function renderCascade(chains) {
+  const container = document.getElementById('cascade-container');
+  if (!chains || chains.length === 0) { 
+    container.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">NO CASCADE DATA</div>'; 
+    return; 
+  }
+
+  container.innerHTML = chains.map((c, i) => {
+    const severity = c.estimatedImpactScore > 0.8 ? 'active' : c.estimatedImpactScore > 0.6 ? 'warning' : 'ok';
+    const indent = i > 0 ? 'cascade-indent cascade-edge' : '';
+    // Lineweight proportional to impact score
+    const weight = Math.max(1, Math.floor(c.estimatedImpactScore * 4));
+    return `<div class="cascade-node ${severity} ${indent}" style="border-left-width:${weight}px">
+      <span style="flex:1;color:var(--text-muted)">${c.source}</span>
+      <span style="color:var(--border-color);font-size:12px">→[${(c.estimatedImpactScore*100).toFixed(0)}%]→</span>
+      <span style="flex:1;text-align:right">${c.target}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderPlan(plan) {
+  const container = document.getElementById('plan-content');
+  if (!plan) { 
+    container.innerHTML = '<div class="fallback-banner active">[NO PLAN — RUN PIPELINE]</div>'; 
+    return; 
+  }
+
+  container.innerHTML = `
+    <div class="plan-block">
+      <div class="plan-block-title">▸ Executive Summary</div>
+      <div class="plan-block-content">${plan.summary || ''}</div>
+    </div>
+    <div class="plan-block">
+      <div class="plan-block-title">▸ Priority Level: <span style="color:var(--accent-warning)">${plan.priorityLevel || 'UNKNOWN'}</span></div>
+      <div class="plan-block-content">
+        ${(plan.recommendedActions || []).map(a => `• ${a}`).join('<br>')}
+      </div>
+    </div>
+    <div class="plan-block" style="border-left-color:var(--accent-alert)">
+      <div class="plan-block-title" style="color:var(--accent-alert)">▸ Rationale</div>
+      <div class="plan-block-content">${plan.rationale || ''}</div>
+    </div>`;
+}
+
+// =====================
+// EXECUTORS
+// =====================
+function parseLatencies(trace) {
+  edgeLatencies = {};
+  if(!trace) return;
+  EDGES.forEach(([from, to, tEnd, tStart]) => {
+    if(trace[tEnd] && trace[tStart]) {
+      const ms = new Date(trace[tEnd]) - new Date(trace[tStart]);
+      edgeLatencies[`${from}-${to}`] = ms > 0 ? ms : 0;
+    }
+  });
+}
+
+async function runAgent(endpointType) {
+  const banner = document.getElementById('running-banner');
+  const textEl = document.getElementById('running-text');
+  const signalError = document.getElementById('signal-error-banner');
+  
+  banner.classList.add('active');
+  signalError.style.display = 'none';
+
+  // reset
+  AGENTS.forEach(ag => agentStates[ag.id] = 'idle');
+  agentStates['orchestrator'] = 'computing';
+
+  let payload;
+  try { payload = JSON.parse(document.getElementById('payload-editor').value); }
+  catch { payload = buildPayload(); }
+
+  if (mockEnabled) {
+    textEl.textContent = 'PIPELINE EXECUTING — MOCK MODE ACTIVE...';
+    await delay(600);
+    agentStates['orchestrator'] = 'success';
+    agentStates['historical'] = 'success';
+    agentStates['learning'] = 'success';
+    await delay(600);
+    agentStates['planning'] = 'success';
+    agentStates['reflection'] = 'success';
+    
+    currentResult = MOCK_RESULT;
+    parseLatencies(currentResult.workflowTrace);
+    renderPlan(currentResult.generatedPlan);
+    drawConfidenceRadar(currentResult.confidenceBreakdown);
+    renderCascade(currentResult.affectedSystems);
+    banner.classList.remove('active');
+    return;
+  }
+
+  // Live execution
+  textEl.textContent = `EXECUTING /${endpointType === 'full' ? 'run-full-workflow' : 'run-agent'}...`;
+  
+  try {
+    const endpoint = endpointType === 'full' ? '/run-full-workflow' : '/run-agent';
+    const res = await fetch(BACKEND + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ observationReport: payload }),
+    });
+
+    AGENTS.forEach(ag => agentStates[ag.id] = 'computing');
+    const json = await res.json();
+    
+    if(!json.success) throw new Error(json.error || 'Pipeline Failure');
+    
+    AGENTS.forEach(ag => agentStates[ag.id] = 'success');
+    currentResult = json.data;
+    
+    // Fallback UI if missing historical
+    if(!currentResult.historicalMatches || currentResult.historicalMatches.length === 0) {
+      signalError.style.display = 'block';
+      if(!currentResult.confidenceBreakdown) currentResult.confidenceBreakdown = {};
+      currentResult.confidenceBreakdown.evidenceWeight = 0.5; // fallback
+      agentStates['historical'] = 'warning';
+    }
+
+    parseLatencies(currentResult.workflowTrace);
+    renderPlan(currentResult.generatedPlan || currentResult.plan);
+    if(currentResult.confidenceBreakdown) drawConfidenceRadar(currentResult.confidenceBreakdown);
+    if(currentResult.affectedSystems) renderCascade(currentResult.affectedSystems);
+    
+  } catch (err) {
+    AGENTS.forEach(ag => agentStates[ag.id] = 'warning');
+    document.getElementById('plan-content').innerHTML = `<div class="fallback-banner active">
+      [PIPELINE ERROR — BACKEND UNREACHABLE]<br>${err.message}
+    </div>`;
+  }
+  banner.classList.remove('active');
+}
+
+async function runCounterfactual() {
+  if(!currentResult || !currentResult.generatedPlan) return alert("Run pipeline first.");
+  
+  agentStates['counterfactual'] = 'computing';
+  const gateWarn = document.getElementById('cf-gate-warn');
+  gateWarn.classList.remove('active');
+
+  const reqPayload = {
+    event: buildPayload(),
+    responsePlan: currentResult.generatedPlan,
+    outcome: "Simulated evaluation"
+  };
+
+  let cfResult;
+  if(mockEnabled) {
+    await delay(800);
+    cfResult = MOCK_CF_RESULT;
+  } else {
+    try {
+      const res = await fetch(BACKEND + '/run-counterfactual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reqPayload)
+      });
+      const json = await res.json();
+      if(!json.success) throw new Error(json.error);
+      cfResult = json.data;
+    } catch(err) {
+      agentStates['counterfactual'] = 'warning';
+      document.getElementById('cf-alternate').textContent = "ERROR: " + err.message;
+      return;
+    }
+  }
+
+  agentStates['counterfactual'] = 'success';
+  document.getElementById('cf-actual').textContent = cfResult.actual || "Actual parameters recorded.";
+  document.getElementById('cf-alternate').innerHTML = `
+    <div style="color:var(--text-muted);margin-bottom:10px">${cfResult.reasoning || ''}</div>
+    <div style="margin-bottom:10px;color:var(--text-nominal)">→ ${cfResult.alternate || ''}</div>
+    <div style="border-top:1px solid var(--border-color);padding-top:10px">
+      <div class="metric-row"><span class="metric-key">Estimated Impact</span><span class="metric-val" style="color:var(--accent-success)">${cfResult.estimatedImpactScore}</span></div>
+      <div class="metric-row"><span class="metric-key">Confidence</span><span class="metric-val">${cfResult.confidenceRanking}</span></div>
+    </div>`;
+    
+  // Trigger UI Safety Guardrail
+  if((cfResult.confidenceRanking || cfResult.estimatedImpactScore || cfResult.confidence || 0) < 0.6) {
+    gateWarn.classList.add('active');
+    agentStates['counterfactual'] = 'warning';
+  }
+}
+
+// =====================
+// ES AUDITOR
+// =====================
+async function loadIndexCounts() {
+  const grid = document.getElementById('index-grid');
+  grid.innerHTML = '<div style="color:var(--text-muted);font-size:14px;padding:12px">Loading indices...</div>';
+  
+  if (mockEnabled) {
+    grid.innerHTML = ES_INDICES.map(idx => `
+      <div class="index-cell" onclick="selectIndex('${idx}')" id="idx-${idx.replace(/[^a-z0-9]/g,'-')}">
+        <div class="index-name">${idx}</div>
+        <div class="index-count">docs: <span>${Math.floor(Math.random()*100)}</span></div>
+      </div>`).join('');
+    return;
+  }
+
+  try {
+    const res = await fetch(BACKEND + '/debug/indices');
+    const indices = await res.json();
+    grid.innerHTML = indices.map(idx => {
+      // Map format if it's from _cat/indices
+      const name = idx.index || idx.name;
+      const count = idx['docs.count'] || idx.docsCount || 0;
+      return `
+      <div class="index-cell" onclick="selectIndex('${name}')" id="idx-${name.replace(/[^a-z0-9]/g,'-')}">
+        <div class="index-name">${name}</div>
+        <div class="index-count">docs: <span>${count}</span></div>
+      </div>`;
+    }).join('');
+  } catch(err) {
+    grid.innerHTML = '<div class="fallback-banner active">BACKEND /debug/indices FAILED</div>';
+  }
+}
+
+async function selectIndex(name) {
+  selectedIndex = name;
+  document.querySelectorAll('.index-cell').forEach(el => el.classList.remove('selected'));
+  document.getElementById('idx-' + name.replace(/[^a-z0-9]/g,'-'))?.classList.add('selected');
+  document.getElementById('inspector-idx-label').textContent = name;
+
+  const container = document.getElementById('index-docs-container');
+  container.innerHTML = '<div style="padding:16px;font-size:14px;color:var(--text-muted)">Loading...</div>';
+
+  if (mockEnabled) {
+    await delay(300);
+    const mockDoc = { id: "doc-1", source: { _mock: true, index: name, timestamp: new Date().toISOString() } };
+    container.innerHTML = `<div class="json-viewer">${syntaxHighlight(JSON.stringify([mockDoc], null, 2))}</div>`;
+    return;
+  }
+
+  try {
+    const res = await fetch(`${BACKEND}/debug/docs/${name}`);
+    const data = await res.json();
+    container.innerHTML = `<div class="json-viewer">${syntaxHighlight(JSON.stringify(data, null, 2))}</div>`;
+  } catch(err) {
+    container.innerHTML = `<div class="fallback-banner active">FETCH FAILED</div>`;
+  }
+}
+
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    let cls = 'json-num';
+    if (/^"/.test(match)) cls = /:$/.test(match) ? 'json-key' : 'json-str';
+    else if (/true|false/.test(match)) cls = 'json-bool';
+    else if (/null/.test(match)) cls = 'json-null';
+    return `<span class="${cls}">${match}</span>`;
+  });
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// =====================
+// UI CONTROLS
+// =====================
+function switchView(view) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('main-ops').style.display = view === 'ops' ? 'grid' : 'none';
+  const mem = document.getElementById('main-memory');
+  mem.style.display = view === 'memory' ? 'grid' : 'none';
+  if(view === 'memory' && document.getElementById('index-grid').children.length === 0) loadIndexCounts();
+}
+
+function switchCenterTab(tab) {
+  document.querySelectorAll('.center-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.center-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  if (tab === 'graph') resizeCanvas();
+}
+
+function toggleMock(on) {
+  mockEnabled = on;
+  document.querySelector('.system-status span').textContent = on ? 'MOCK MODE ACTIVE' : 'SYSTEM NOMINAL';
+  loadIndexCounts();
+}
+
+// =====================
+// INIT
+// =====================
+window.addEventListener('load', () => {
+  syncPayload();
+  initCanvas();
+  drawConfidenceRadar({ strategyWeight: 0.5, evidenceWeight: 0.5, dependencyWeight: 0.5 });
+  loadIndexCounts();
+});
+</script>
+
+</body>
+</html>
