@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DRIS // Disaster Response Intelligence System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000;
+    --amber: #FFB000;
+    --amber-dim: #7A5400;
+    --amber-glow: rgba(255,176,0,0.15);
+    --cyan: #00E5FF;
+    --cyan-dim: #006070;
+    --cyan-glow: rgba(0,229,255,0.12);
+    --crimson: #FF3366;
+    --crimson-dim: #6A0028;
+    --crimson-glow: rgba(255,51,102,0.15);
+    --emerald: #00FF66;
+    --emerald-dim: #005522;
+    --emerald-glow: rgba(0,255,102,0.12);
+    --gray: #2A2A2A;
+    --gray-mid: #1A1A1A;
+    --gray-light: #444;
+    --text-muted: #555;
+    --border: 1px solid #222;
+    --border-amber: 1px solid var(--amber-dim);
+    --border-cyan: 1px solid var(--cyan-dim);
+    --font: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--black);
+    color: var(--amber);
+    font-family: var(--font);
+    font-size: 12px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Layout */
+  .shell {
+    display: grid;
+    grid-template-rows: 48px 1fr;
+    grid-template-columns: 1fr;
+    height: 100vh;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--amber-dim);
+    background: #050505;
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .logo {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--amber);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--cyan); }
+
+  .system-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--emerald);
+    animation: pulse-emerald 2s infinite;
+  }
+
+  @keyframes pulse-emerald {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--emerald); }
+    50% { opacity: 0.4; box-shadow: none; }
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .clock { color: var(--cyan); font-weight: 600; }
+
+  /* Nav tabs */
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
+    margin-left: 24px;
+  }
+
+  .nav-tab {
+    padding: 4px 12px;
+    font-size: 10px;
+    font-family: var(--font);
+    color: var(--text-muted);
+    background: transparent;
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+
+  .nav-tab:hover { color: var(--amber); border-color: var(--amber-dim); }
+  .nav-tab.active { color: var(--amber); border-color: var(--amber-dim); background: var(--amber-glow); }
+
+  /* Main content area */
+  .main {
+    display: grid;
+    grid-template-columns: 340px 1fr 300px;
+    overflow: hidden;
+  }
+
+  /* Panels */
+  .panel {
+    border-right: var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel:last-child { border-right: none; }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: var(--border);
+    background: #050505;
+    flex-shrink: 0;
+  }
+
+  .panel-title {
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--cyan);
+  }
+
+  .panel-badge {
+    font-size: 8px;
+    padding: 2px 6px;
+    border: 1px solid currentColor;
+    border-radius: 2px;
+  }
+
+  .badge-amber { color: var(--amber); }
+  .badge-cyan { color: var(--cyan); }
+  .badge-emerald { color: var(--emerald); }
+  .badge-crimson { color: var(--crimson); }
+
+  .panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--amber-dim) transparent;
+  }
+
+  /* Section label */
+  .section-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #111;
+  }
+
+  /* Terminal input */
+  .terminal-block {
+    background: #050505;
+    border: var(--border);
+    border-left: 2px solid var(--amber-dim);
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .terminal-block label {
+    display: block;
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .terminal-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--cyan);
+    font-family: var(--font);
+    font-size: 11px;
+    outline: none;
+    padding: 2px 0;
+  }
+
+  .terminal-input::placeholder { color: #333; }
+
+  .terminal-select {
+    width: 100%;
+    background: #050505;
+    border: 1px solid #222;
+    color: var(--amber);
+    font-family: var(--font);
+    font-size: 11px;
+    padding: 4px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .terminal-select option { background: #000; }
+
+  /* Payload editor */
+  .payload-editor {
+    width: 100%;
+    background: #020202;
+    border: var(--border);
+    border-left: 2px solid var(--cyan-dim);
+    color: var(--emerald);
+    font-family: var(--font);
+    font-size: 10px;
+    padding: 10px;
+    resize: vertical;
+    min-height: 140px;
+    outline: none;
+    line-height: 1.6;
+  }
+
+  /* Severity slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .slider-label {
+    font-size: 9px;
+    color: var(--text-muted);
+    width: 90px;
+    flex-shrink: 0;
+  }
+
+  input[type=range] {
+    flex: 1;
+    appearance: none;
+    height: 2px;
+    background: #222;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    appearance: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--amber);
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-size: 10px;
+    color: var(--amber);
+    width: 30px;
+    text-align: right;
+  }
+
+  /* Command buttons */
+  .cmd-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .cmd-btn {
+    padding: 10px 8px;
+    font-family: var(--font);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid;
+    background: transparent;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cmd-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .cmd-btn:hover::after { opacity: 0.08; }
+  .cmd-btn:active::after { opacity: 0.15; }
+
+  .cmd-btn-amber {
+    color: var(--amber);
+    border-color: var(--amber);
+  }
+
+  .cmd-btn-cyan {
+    color: var(--cyan);
+    border-color: var(--cyan);
+  }
+
+  .cmd-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* Agent graph area */
+  .graph-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  #agent-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Center panel tabs */
+  .center-tabs {
+    display: flex;
+    border-bottom: var(--border);
+    background: #050505;
+    flex-shrink: 0;
+  }
+
+  .center-tab {
+    padding: 8px 16px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    font-family: var(--font);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .center-tab:hover { color: var(--amber); }
+  .center-tab.active { color: var(--amber); border-bottom-color: var(--amber); }
+
+  .center-view { display: none; flex: 1; overflow: hidden; }
+  .center-view.active { display: flex; flex-direction: column; }
+
+  /* Historical matches */
+  .match-card {
+    border: var(--border);
+    border-left: 2px solid var(--amber-dim);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: #050505;
+    cursor: pointer;
+    transition: border-left-color 0.15s;
+  }
+
+  .match-card:hover { border-left-color: var(--amber); }
+
+  .match-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .match-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--amber);
+  }
+
+  .match-score {
+    font-size: 10px;
+    color: var(--cyan);
+    font-weight: 600;
+  }
+
+  .decay-bar-container {
+    margin: 4px 0;
+  }
+
+  .decay-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+
+  .decay-bar {
+    height: 3px;
+    background: #111;
+    position: relative;
+  }
+
+  .decay-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--amber-dim));
+    transition: width 0.5s;
+  }
+
+  .decay-fill.aged { background: linear-gradient(90deg, var(--crimson), var(--crimson-dim)); }
+
+  /* Counterfactual */
+  .cf-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .cf-lane {
+    border: var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .cf-lane-header {
+    padding: 6px 10px;
+    border-bottom: var(--border);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: #050505;
+  }
+
+  .cf-lane-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    font-size: 10px;
+    line-height: 1.7;
+    color: #666;
+  }
+
+  .cf-gate-warning {
+    margin: 8px;
+    padding: 8px;
+    border: 1px solid var(--crimson-dim);
+    background: var(--crimson-glow);
+    font-size: 9px;
+    color: var(--crimson);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Gauge: confidence radar */
+  #confidence-canvas { display: block; margin: 0 auto; }
+
+  /* Infrastructure cascade */
+  .cascade-node {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 0;
+    font-size: 10px;
+    color: var(--text-muted);
+    position: relative;
+  }
+
+  .cascade-node::before {
+    content: '';
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .cascade-node.active::before { background: var(--crimson); box-shadow: 0 0 6px var(--crimson); animation: flicker 1.5s infinite; }
+  .cascade-node.warning::before { background: var(--amber); }
+  .cascade-node.ok::before { background: var(--emerald); }
+  .cascade-indent { padding-left: 20px; }
+
+  .cascade-edge {
+    margin-left: 4px;
+    padding-left: 14px;
+    border-left: 1px dashed #222;
+  }
+
+  @keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Contradiction beam */
+  .beam-container {
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+
+  .beam-track {
+    position: relative;
+    height: 6px;
+    background: linear-gradient(90deg, var(--emerald-dim), var(--amber-dim) 50%, var(--crimson-dim));
+    border-radius: 3px;
+    margin: 8px 0;
+  }
+
+  .beam-marker {
+    position: absolute;
+    top: -4px;
+    width: 14px; height: 14px;
+    background: var(--black);
+    border: 2px solid var(--amber);
+    border-radius: 50%;
+    transform: translateX(-50%);
+    transition: left 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .beam-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .beam-value {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--amber);
+    margin: 6px 0 2px;
+  }
+
+  .beam-status {
+    text-align: center;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ES Index grid */
+  .index-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  .index-cell {
+    border: var(--border);
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #050505;
+  }
+
+  .index-cell:hover { border-color: var(--cyan-dim); background: var(--cyan-glow); }
+  .index-cell.selected { border-color: var(--cyan); background: var(--cyan-glow); }
+
+  .index-name {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--cyan);
+    margin-bottom: 2px;
+    word-break: break-all;
+  }
+
+  .index-count {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  .index-count span { color: var(--amber); font-weight: 600; }
+
+  /* JSON viewer */
+  .json-viewer {
+    background: #020202;
+    border: var(--border);
+    border-left: 2px solid var(--cyan-dim);
+    padding: 10px;
+    font-size: 10px;
+    line-height: 1.7;
+    overflow-y: auto;
+    max-height: 260px;
+    color: #666;
+  }
+
+  .json-key { color: var(--cyan); }
+  .json-str { color: var(--emerald); }
+  .json-num { color: var(--amber); }
+  .json-bool { color: var(--crimson); }
+  .json-null { color: var(--text-muted); }
+
+  /* Sidebar agent trace */
+  .agent-trace {
+    border: var(--border);
+    margin-bottom: 8px;
+    background: #050505;
+  }
+
+  .agent-trace-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: var(--border);
+    cursor: pointer;
+  }
+
+  .agent-trace-name {
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .agent-trace-body {
+    padding: 8px 10px;
+    font-size: 9px;
+    line-height: 1.8;
+    color: #555;
+    display: none;
+  }
+
+  .agent-trace-body.open { display: block; }
+
+  .trace-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .trace-key { color: var(--text-muted); flex-shrink: 0; width: 100px; }
+  .trace-val { color: var(--amber); word-break: break-all; }
+  .trace-val.ok { color: var(--emerald); }
+  .trace-val.warn { color: var(--amber); }
+  .trace-val.fail { color: var(--crimson); }
+
+  /* Loading / running state */
+  .running-banner {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--cyan-glow);
+    border-bottom: 1px solid var(--cyan-dim);
+    font-size: 9px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .running-banner.active { display: flex; }
+
+  .spinner {
+    width: 12px; height: 12px;
+    border: 1.5px solid transparent;
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Fallback banner */
+  .fallback-banner {
+    display: none;
+    padding: 16px;
+    border: 1px solid var(--amber-dim);
+    background: var(--amber-glow);
+    font-size: 10px;
+    color: var(--amber);
+    line-height: 1.8;
+    margin: 10px;
+  }
+
+  .fallback-banner.active { display: block; }
+
+  /* Response plan */
+  .plan-block {
+    border: var(--border);
+    border-left: 2px solid var(--emerald-dim);
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #050505;
+  }
+
+  .plan-block-title {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--emerald);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .plan-block-content {
+    font-size: 10px;
+    color: #666;
+    line-height: 1.8;
+  }
+
+  .risk-tag {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: 8px;
+    border: 1px solid;
+    margin: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .risk-high { color: var(--crimson); border-color: var(--crimson-dim); }
+  .risk-med { color: var(--amber); border-color: var(--amber-dim); }
+  .risk-low { color: var(--emerald); border-color: var(--emerald-dim); }
+
+  /* Mock toggle */
+  .mock-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9px;
+    color: var(--text-muted);
+    cursor: pointer;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 28px; height: 14px;
+  }
+
+  .toggle-switch input { display: none; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #222;
+    border-radius: 7px;
+    transition: background 0.2s;
+  }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 10px; height: 10px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle-switch input:checked ~ .toggle-track { background: var(--amber-dim); }
+  .toggle-switch input:checked ~ .toggle-thumb { transform: translateX(14px); background: var(--amber); }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #222; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    z-index: 10000;
+    background: #111;
+    border: 1px solid var(--amber-dim);
+    padding: 6px 10px;
+    font-size: 9px;
+    color: var(--amber);
+    pointer-events: none;
+    display: none;
+    max-width: 200px;
+    line-height: 1.6;
+  }
+
+  /* Highlight on new data */
+  @keyframes flash-in {
+    from { background: var(--amber-glow); }
+    to { background: transparent; }
+  }
+
+  .flash { animation: flash-in 0.8s ease-out; }
+
+  /* Divider */
+  .divider {
+    border: none;
+    border-top: 1px solid #111;
+    margin: 10px 0;
+  }
+
+  /* Mini metric */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border-bottom: 1px solid #0a0a0a;
+  }
+
+  .metric-key { font-size: 9px; color: var(--text-muted); }
+  .metric-val { font-size: 10px; font-weight: 600; color: var(--amber); }
+
+  /* Micro bar */
+  .micro-bar {
+    height: 2px;
+    background: #111;
+    margin: 2px 0 6px;
+  }
+
+  .micro-bar-fill {
+    height: 100%;
+    background: var(--cyan);
+    transition: width 0.6s;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="logo">DRIS<span>//</span>CMD</div>
+      <div class="system-status">
+        <div class="status-dot"></div>
+        <span>SYSTEM NOMINAL</span>
+      </div>
+      <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="switchView('ops')">OPS CENTER</button>
+        <button class="nav-tab" onclick="switchView('memory')">MEMORY AUDIT</button>
+        <button class="nav-tab" onclick="switchView('intelligence')">INTELLIGENCE</button>
+      </nav>
+    </div>
+    <div class="topbar-right">
+      <label class="mock-toggle" title="Toggle mock data">
+        <label class="toggle-switch">
+          <input type="checkbox" id="mock-toggle" checked onchange="toggleMock(this.checked)">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+        <span>MOCK DATA</span>
+      </label>
+      <span>BACKEND: <span style="color:var(--amber)" id="backend-url">localhost:3000</span></span>
+      <span class="clock" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <!-- MAIN AREA -->
+  <main class="main" id="main-ops">
+
+    <!-- LEFT PANEL: Telemetry Input -->
+    <aside class="panel" id="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">// Telemetry Input Deck</span>
+        <span class="panel-badge badge-amber">FEED ACTIVE</span>
+      </div>
+      <div class="panel-body">
+
+        <div class="section-label">Data Sources</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:10px">
+          <div class="terminal-block" style="margin:0">
+            <label>NEWS_API</label>
+            <input type="text" class="terminal-input" value="Reuters, AP" id="src-news">
+          </div>
+          <div class="terminal-block" style="margin:0">
+            <label>GOV_FEEDS</label>
+            <input type="text" class="terminal-input" value="NDMA, IMD" id="src-gov">
+          </div>
+          <div class="terminal-block" style="margin:0">
+            <label>WEATHER_IOT</label>
+            <input type="text" class="terminal-input" value="0xF2, 0xA4" id="src-iot">
+          </div>
+          <div class="terminal-block" style="margin:0">
+            <label>SAT_GIS</label>
+            <input type="text" class="terminal-input" value="INSAT-3D" id="src-sat">
+          </div>
+        </div>
+
+        <div class="section-label">Event Parameters</div>
+        <div class="terminal-block">
+          <label>Disaster Type</label>
+          <select class="terminal-select" id="disaster-type" onchange="syncPayload()">
+            <option value="FLOOD">FLOOD</option>
+            <option value="EARTHQUAKE">EARTHQUAKE</option>
+            <option value="CYCLONE">CYCLONE</option>
+            <option value="INFRASTRUCTURE_FAILURE">INFRA_FAILURE</option>
+            <option value="FIRE">FIRE</option>
+          </select>
+        </div>
+        <div class="terminal-block">
+          <label>Severity</label>
+          <select class="terminal-select" id="severity" onchange="syncPayload()">
+            <option value="LOW">LOW</option>
+            <option value="MEDIUM" selected>MEDIUM</option>
+            <option value="HIGH">HIGH</option>
+            <option value="CRITICAL">CRITICAL</option>
+          </select>
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label">Water Level (m)</span>
+          <input type="range" min="0" max="10" step="0.1" value="3.2" id="water-level" oninput="updateSlider('water-level-val',this.value);syncPayload()">
+          <span class="slider-val" id="water-level-val">3.2</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Rainfall (mm)</span>
+          <input type="range" min="0" max="500" value="145" id="rainfall" oninput="updateSlider('rainfall-val',this.value);syncPayload()">
+          <span class="slider-val" id="rainfall-val">145</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Pop. Affected</span>
+          <input type="range" min="0" max="100000" step="100" value="12400" id="pop-aff" oninput="updateSlider('pop-aff-val',this.value,'k',1000);syncPayload()">
+          <span class="slider-val" id="pop-aff-val">12.4k</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Roads Affected</span>
+          <input type="range" min="0" max="50" value="7" id="roads" oninput="updateSlider('roads-val',this.value);syncPayload()">
+          <span class="slider-val" id="roads-val">7</span>
+        </div>
+        <div class="slider-row">
+          <span class="slider-label">Infra Bitmask</span>
+          <input type="range" min="0" max="255" value="42" id="infra-mask" oninput="updateSlider('infra-mask-val',this.value,'',1,'0b',true);syncPayload()">
+          <span class="slider-val" id="infra-mask-val" style="width:50px;font-size:8px">0b101010</span>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Raw Payload // observationReport</div>
+        <textarea class="payload-editor" id="payload-editor" spellcheck="false"></textarea>
+
+        <div class="cmd-split">
+          <button class="cmd-btn cmd-btn-amber" onclick="runAgent('legacy')" id="btn-legacy">
+            ▶ /run-agent<br><span style="font-size:8px;font-weight:400">Legacy Path</span>
+          </button>
+          <button class="cmd-btn cmd-btn-cyan" onclick="runAgent('full')" id="btn-full">
+            ⚡ /run-full<br><span style="font-size:8px;font-weight:400">Multi-Agent</span>
+          </button>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL -->
+    <div class="panel" style="border-right:none">
+
+      <div class="running-banner" id="running-banner">
+        <div class="spinner"></div>
+        <span id="running-text">PIPELINE EXECUTING — AWAITING AGENT HANDOFF...</span>
+      </div>
+
+      <div class="center-tabs">
+        <button class="center-tab active" onclick="switchCenterTab('graph')">AGENT GRAPH</button>
+        <button class="center-tab" onclick="switchCenterTab('historical')">HISTORICAL</button>
+        <button class="center-tab" onclick="switchCenterTab('counterfactual')">COUNTERFACTUAL</button>
+        <button class="center-tab" onclick="switchCenterTab('plan')">RESPONSE PLAN</button>
+      </div>
+
+      <!-- Agent Graph -->
+      <div class="center-view active" id="view-graph">
+        <div class="graph-container">
+          <canvas id="agent-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Historical matches -->
+      <div class="center-view" id="view-historical">
+        <div id="fallback-banner" class="fallback-banner">
+          [SIGNAL STABILITY LOW - INSUFFICIENT HISTORIC DATA.<br>RECOVERY ENGINE ENGAGED: FALLBACK CONFIDENCE SET TO 0.5]
+        </div>
+        <div style="flex:1;overflow-y:auto;padding:12px" id="historical-list"></div>
+      </div>
+
+      <!-- Counterfactual -->
+      <div class="center-view" id="view-counterfactual">
+        <div style="padding:8px 12px;border-bottom:var(--border);font-size:9px;color:var(--text-muted);background:#050505">
+          QUALITY GATE: <span style="color:var(--amber)">0.6</span> persistence threshold — scenarios below gate are flagged
+        </div>
+        <div class="cf-compare" style="padding:8px;gap:8px">
+          <div class="cf-lane">
+            <div class="cf-lane-header" style="color:var(--cyan)">◈ ACTUAL TIMELINE</div>
+            <div class="cf-lane-body" id="cf-actual">—</div>
+          </div>
+          <div class="cf-lane">
+            <div class="cf-lane-header" style="color:var(--amber)">◇ COUNTERFACTUAL PATH</div>
+            <div id="cf-gate-warn" class="cf-gate-warning" style="display:none">
+              ⚠ CONFIDENCE BELOW 0.6 GATE — SCENARIO REJECTED
+            </div>
+            <div class="cf-lane-body" id="cf-alternate">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Response plan -->
+      <div class="center-view" id="view-plan">
+        <div style="flex:1;overflow-y:auto;padding:12px" id="plan-content">
+          <div class="fallback-banner active" style="display:block">
+            [NO PLAN GENERATED — SUBMIT TELEMETRY TO INITIATE PIPELINE]
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: Agent Traces + Gauges -->
+    <aside class="panel" style="border-right:none;border-left:var(--border)">
+      <div class="panel-header">
+        <span class="panel-title">// Agent Traces</span>
+        <span class="panel-badge badge-cyan" id="trace-status">IDLE</span>
+      </div>
+      <div class="panel-body" id="right-panel-body">
+
+        <div id="agent-traces-container">
+          <!-- injected dynamically -->
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Contradiction Balance</div>
+        <div class="beam-container">
+          <div class="beam-value" id="contra-val">0.00</div>
+          <div class="beam-status" id="contra-status" style="color:var(--emerald)">NOMINAL</div>
+          <div class="beam-track">
+            <div class="beam-marker" id="beam-marker" style="left:0%"></div>
+          </div>
+          <div class="beam-labels">
+            <span>0.0</span>
+            <span style="color:var(--amber)">0.2 CAUTION</span>
+            <span style="color:var(--crimson)">0.5 ALERT</span>
+            <span>1.0</span>
+          </div>
+        </div>
+
+        <hr class="divider">
+        <div class="section-label">Confidence Attribution</div>
+        <canvas id="confidence-canvas" width="264" height="200"></canvas>
+
+        <hr class="divider">
+        <div class="section-label">Infrastructure Cascade</div>
+        <div id="cascade-container" style="margin-top:4px"></div>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- MEMORY AUDIT VIEW (hidden by default) -->
+  <div id="main-memory" style="display:none;flex:1;overflow:hidden;display:none">
+    <div style="display:grid;grid-template-columns:1fr 1fr;height:100%;gap:0">
+      <div class="panel" style="border-right:var(--border)">
+        <div class="panel-header">
+          <span class="panel-title">// 14-Index Elasticsearch Memory</span>
+          <span class="panel-badge badge-cyan">AUDITOR</span>
+        </div>
+        <div class="panel-body">
+          <div class="section-label">Index Registry</div>
+          <div class="index-grid" id="index-grid"></div>
+        </div>
+      </div>
+      <div class="panel" style="border-right:none">
+        <div class="panel-header">
+          <span class="panel-title">// Index Inspector</span>
+          <span class="panel-badge badge-emerald" id="inspector-idx-label">SELECT INDEX</span>
+        </div>
+        <div class="panel-body">
+          <div id="index-docs-container">
+            <div class="fallback-banner active">
+              SELECT AN INDEX TO INSPECT STORED PAYLOADS
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE VIEW (hidden by default) -->
+  <div id="main-intelligence" style="display:none;flex:1;overflow:hidden">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;height:100%">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// Novelty & Evidence</span>
+          <span class="panel-badge badge-amber">METRICS</span>
+        </div>
+        <div class="panel-body">
+          <div class="section-label">Novelty Score</div>
+          <div class="metric-row"><span class="metric-key">Score</span><span class="metric-val" id="intel-novelty">0.90</span></div>
+          <div class="micro-bar"><div class="micro-bar-fill" id="intel-novelty-bar" style="width:90%"></div></div>
+          <div class="metric-row"><span class="metric-key">Confidence Penalty</span><span class="metric-val" id="intel-penalty" style="color:var(--crimson)">-0.25</span></div>
+          <div class="metric-row"><span class="metric-key">Strategy Confidence</span><span class="metric-val" id="intel-strat">0.50</span></div>
+          <div class="micro-bar"><div class="micro-bar-fill" id="intel-strat-bar" style="width:50%"></div></div>
+
+          <hr class="divider">
+          <div class="section-label">Evidence Reliability</div>
+          <div class="metric-row"><span class="metric-key">Avg Score</span><span class="metric-val" id="intel-ev">0.50</span></div>
+          <div class="micro-bar"><div class="micro-bar-fill" id="intel-ev-bar" style="width:50%"></div></div>
+          <div class="metric-row"><span class="metric-key">Sources Checked</span><span class="metric-val" id="intel-srcs">0</span></div>
+
+          <hr class="divider">
+          <div class="section-label">Overall Confidence</div>
+          <div style="text-align:center;font-size:36px;font-weight:700;color:var(--amber);padding:12px 0" id="intel-overall">—</div>
+          <div style="text-align:center;font-size:9px;color:var(--text-muted)">WEIGHTED COMPOSITE</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// Emerging Risks</span>
+          <span class="panel-badge badge-crimson">RISK RADAR</span>
+        </div>
+        <div class="panel-body" id="emerging-risks-panel">
+          <div class="fallback-banner active">NO RISK DATA — RUN PIPELINE FIRST</div>
+        </div>
+      </div>
+      <div class="panel" style="border-right:none">
+        <div class="panel-header">
+          <span class="panel-title">// Causal Chains</span>
+          <span class="panel-badge badge-amber">LINEAGE</span>
+        </div>
+        <div class="panel-body" id="causal-chains-panel">
+          <div class="fallback-banner active">NO CAUSAL DATA — RUN PIPELINE FIRST</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// =====================
+// STATE
+// =====================
+let mockEnabled = true;
+let currentResult = null;
+let agentStates = {};
+let selectedIndex = null;
+
+const BACKEND = 'http://localhost:3000';
+
+const ES_INDICES = [
+  'disaster-reports','disaster-outcomes','disaster-plans','strategy-memory',
+  'counterfactual-memory','dependency-memory','knowledge-gap-memory',
+  'causal-memory','novel-event-memory','recommendation-memory',
+  'evidence-reliability-memory','memory-conflict-resolution',
+  'decision-lineage-memory','emerging-risks'
+];
+
+const AGENTS = [
+  { id: 'orchestrator', label: 'Orchestrator', x: 0.5, y: 0.12, color: '#FFB000' },
+  { id: 'historical', label: 'Historical', x: 0.18, y: 0.42, color: '#00E5FF' },
+  { id: 'learning', label: 'Learning', x: 0.38, y: 0.55, color: '#00E5FF' },
+  { id: 'planning', label: 'Planning', x: 0.62, y: 0.55, color: '#00E5FF' },
+  { id: 'reflection', label: 'Reflection', x: 0.82, y: 0.42, color: '#00E5FF' },
+  { id: 'counterfactual', label: 'Counterfactual', x: 0.5, y: 0.82, color: '#00E5FF' },
+];
+
+const EDGES = [
+  ['orchestrator','historical'],
+  ['orchestrator','learning'],
+  ['orchestrator','planning'],
+  ['orchestrator','reflection'],
+  ['historical','learning'],
+  ['learning','planning'],
+  ['planning','reflection'],
+  ['reflection','counterfactual'],
+];
+
+// =====================
+// MOCK DATA
+// =====================
+const MOCK_RESULT = {
+  historicalMatches: [
+    { id:'EVT-2021-KER-001', type:'FLOOD', location:'Kerala, India', year:2021, similarity:0.92, ageYears:3.1, outcome:'Partial Evacuation' },
+    { id:'EVT-2019-ORI-014', type:'CYCLONE', location:'Odisha, India', year:2019, similarity:0.78, ageYears:5.2, outcome:'Successful Evacuation' },
+    { id:'EVT-2020-ASS-007', type:'FLOOD', location:'Assam, India', year:2020, similarity:0.71, ageYears:4.0, outcome:'Infrastructure Damage' },
+    { id:'EVT-2018-CHN-003', type:'FLOOD', location:'Chennai, India', year:2018, similarity:0.64, ageYears:6.1, outcome:'Relief Ops Deployed' },
+  ],
+  responsePlan: {
+    summary: 'Immediate mobilization of NDRF teams to affected zones. Establish 3 relief camps at high-ground coordinates. Pre-position medical teams.',
+    phases: [
+      { phase: 'PHASE-1 // 0–6h', actions: ['Deploy NDRF Battalion #3','Activate emergency broadcast','Open relief camps at coordinates 23.4N, 87.2E'] },
+      { phase: 'PHASE-2 // 6–24h', actions: ['Medical airlift to critical zones','Bridge assessment team deploy','Food & water distribution to >12k affected'] },
+      { phase: 'PHASE-3 // 24–72h', actions: ['Infrastructure repair prioritization','Displaced population registry','Post-event monitoring protocol'] },
+    ],
+    risks: [
+      { label: 'Road Network Failure', severity: 'high' },
+      { label: 'Power Grid Cascade', severity: 'high' },
+      { label: 'Disease Outbreak Risk', severity: 'med' },
+      { label: 'Communication Blackout', severity: 'med' },
+      { label: 'Secondary Flooding', severity: 'low' },
+    ],
+    approved: true,
+  },
+  counterfactual: {
+    actual: 'NDRF deployed 6h post-event. 3 relief camps operational. Bridge #7 assessment delayed 12h due to road closure on NH-31.',
+    alternativeActions: ['Pre-position NDRF 24h before event','Airlift bridge assessment team','Activate early warning at WL=2.5m'],
+    estimatedImpact: { populationReached: '+18%', infrastructureSaved: '+22%', responseTime: '-4.2h' },
+    reasoning: 'Pre-positioning resources reduces critical first-response window by 4.2h, directly improving population reach by ~18%.',
+    confidence: 0.82,
+  },
+  intelligence: {
+    noveltyScore: 0.34,
+    emergingRiskProbability: 0.67,
+    contradictionScore: 0.28,
+    overallConfidence: 0.71,
+    confidenceBreakdown: { strategyMemory: 0.68, evidenceReliability: 0.75, dependencySupport: 0.63 },
+    confidencePenalty: 0.15,
+    emergingRisks: [
+      { risk: 'Riverbank erosion exceeding historical bounds', probability: 0.78, severity: 'HIGH' },
+      { risk: 'Secondary flash flood from dam discharge', probability: 0.61, severity: 'HIGH' },
+      { risk: 'Contaminated groundwater in relief zone', probability: 0.44, severity: 'MEDIUM' },
+    ],
+    causalChains: [
+      { cause: 'Heavy Rainfall', effect: 'Water Level Rise', confidence: 0.95 },
+      { cause: 'Water Level Rise', effect: 'Road Submersion', confidence: 0.88 },
+      { cause: 'Road Submersion', effect: 'Power Grid Fault', confidence: 0.72 },
+      { cause: 'Power Grid Fault', effect: 'Water Substation Offline', confidence: 0.65 },
+      { cause: 'Water Substation Offline', effect: 'Supply Chain Disruption', confidence: 0.58 },
+    ],
+    dependencyChains: [
+      { source: 'Road Network', target: 'Power Grid', confidence: 0.81 },
+      { source: 'Power Grid', target: 'Water Treatment', confidence: 0.77 },
+      { source: 'Water Treatment', target: 'Hospital Ops', confidence: 0.69 },
+    ],
+    conflicts: [{ description: 'IMD rainfall forecast (145mm) contradicts satellite GIS reading (98mm)', severity: 0.28 }],
+  },
+  agentTraces: {
+    orchestrator: { status: 'finished', delegatedTo: '5 agents', latency: 42 },
+    historical: { status: 'finished', matchesFound: 4, retrievalQuality: 0.92, latency: 187 },
+    learning: { status: 'finished', bayesianSmoothing: true, successRate: 0.74, latency: 94 },
+    planning: { status: 'finished', strategiesConsidered: 7, approved: true, latency: 2340 },
+    reflection: { status: 'finished', risksIdentified: 5, approved: true, latency: 1820 },
+    counterfactual: { status: 'finished', alternativesEvaluated: 3, qualityGatePassed: true, confidence: 0.82, latency: 1560 },
+  },
+};
+
+const MOCK_INDEX_COUNTS = {
+  'disaster-reports': 247, 'disaster-outcomes': 198, 'disaster-plans': 183,
+  'strategy-memory': 412, 'counterfactual-memory': 89, 'dependency-memory': 156,
+  'knowledge-gap-memory': 67, 'causal-memory': 234, 'novel-event-memory': 31,
+  'recommendation-memory': 178, 'evidence-reliability-memory': 95,
+  'memory-conflict-resolution': 44, 'decision-lineage-memory': 310, 'emerging-risks': 62
+};
+
+// =====================
+// CLOCK
+// =====================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toISOString().replace('T',' ').substring(0,19)+' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// =====================
+// CANVAS — AGENT GRAPH
+// =====================
+let canvas, ctx;
+let animFrame = 0;
+let pulseTimers = {};
+
+function initCanvas() {
+  canvas = document.getElementById('agent-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+  canvas.addEventListener('mousemove', handleCanvasHover);
+  canvas.addEventListener('click', handleCanvasClick);
+  drawAgentGraph();
+}
+
+function resizeCanvas() {
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+
+function getNodePos(agent) {
+  return { x: agent.x * canvas.width, y: agent.y * canvas.height };
+}
+
+function getAgentState(id) {
+  return agentStates[id] || 'idle';
+}
+
+function getStateColor(state) {
+  const colors = { idle: '#333', computing: '#00E5FF', finished: '#00FF66', failed: '#FF3366' };
+  return colors[state] || '#333';
+}
+
+function drawAgentGraph() {
+  if (!canvas || !ctx) return;
+  animFrame++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw grid
+  ctx.strokeStyle = '#0a0a0a';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < canvas.width; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+  }
+  for (let y = 0; y < canvas.height; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+  }
+
+  // Draw edges
+  EDGES.forEach(([from, to]) => {
+    const a = AGENTS.find(ag => ag.id === from);
+    const b = AGENTS.find(ag => ag.id === to);
+    if (!a || !b) return;
+    const pa = getNodePos(a), pb = getNodePos(b);
+
+    const stateA = getAgentState(from);
+    const stateB = getAgentState(to);
+    const active = stateA === 'computing' || stateB === 'computing';
+    const done = stateA === 'finished' && stateB === 'finished';
+
+    ctx.strokeStyle = done ? '#005522' : active ? '#006070' : '#151515';
+    ctx.lineWidth = done ? 1.5 : 1;
+    ctx.setLineDash(done ? [] : [4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Latency label
+    const latKey = to;
+    const trace = currentResult?.agentTraces?.[latKey];
+    if (trace?.latency && done) {
+      const mx = (pa.x + pb.x) / 2, my = (pa.y + pb.y) / 2;
+      ctx.fillStyle = '#444';
+      ctx.font = '9px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(trace.latency + 'ms', mx, my - 4);
+    }
+
+    // Animated packet on active edge
+    if (active) {
+      const t = (animFrame % 60) / 60;
+      const px = pa.x + (pb.x - pa.x) * t;
+      const py = pa.y + (pb.y - pa.y) * t;
+      ctx.fillStyle = '#00E5FF';
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Draw nodes
+  AGENTS.forEach(agent => {
+    const pos = getNodePos(agent);
+    const state = getAgentState(agent.id);
+    const color = getStateColor(state);
+    const R = 28;
+
+    // Glow
+    if (state !== 'idle') {
+      const pulse = state === 'computing' ? 0.4 + 0.3 * Math.sin(animFrame * 0.12) : 0.3;
+      const grd = ctx.createRadialGradient(pos.x, pos.y, R * 0.5, pos.x, pos.y, R * 1.8);
+      grd.addColorStop(0, color + Math.floor(pulse * 80).toString(16).padStart(2,'0'));
+      grd.addColorStop(1, 'transparent');
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, R * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.strokeStyle = color;
+    ctx.lineWidth = state === 'computing' ? 1.5 + Math.sin(animFrame * 0.12) * 0.5 : 1.5;
+    ctx.fillStyle = '#050505';
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, R, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner dot
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = state === 'idle' ? '#333' : color;
+    ctx.font = '700 9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(agent.label.toUpperCase(), pos.x, pos.y + R + 14);
+
+    // State label
+    if (state !== 'idle') {
+      ctx.fillStyle = color + 'AA';
+      ctx.font = '8px JetBrains Mono';
+      ctx.fillText(state.toUpperCase(), pos.x, pos.y + R + 24);
+    }
+  });
+
+  requestAnimationFrame(drawAgentGraph);
+}
+
+function handleCanvasHover(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const hit = AGENTS.find(ag => {
+    const p = getNodePos(ag);
+    return Math.hypot(p.x - mx, p.y - my) < 32;
+  });
+  canvas.style.cursor = hit ? 'pointer' : 'default';
+
+  const tt = document.getElementById('tooltip');
+  if (hit && currentResult?.agentTraces?.[hit.id]) {
+    const trace = currentResult.agentTraces[hit.id];
+    let html = `<b>${hit.label.toUpperCase()}</b><br>`;
+    Object.entries(trace).forEach(([k,v]) => {
+      html += `${k}: ${v}<br>`;
+    });
+    tt.innerHTML = html;
+    tt.style.display = 'block';
+    tt.style.left = (e.clientX + 12) + 'px';
+    tt.style.top = (e.clientY - 10) + 'px';
+  } else {
+    tt.style.display = 'none';
+  }
+}
+
+function handleCanvasClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const hit = AGENTS.find(ag => {
+    const p = getNodePos(ag);
+    return Math.hypot(p.x - mx, p.y - my) < 32;
+  });
+  if (hit) {
+    renderAgentTrace(hit.id, true);
+  }
+}
+
+// =====================
+// CONFIDENCE RADAR
+// =====================
+function drawConfidenceRadar(data) {
+  const c = document.getElementById('confidence-canvas');
+  const x = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const cx = W / 2, cy = H / 2 + 10;
+  const R = 70;
+  x.clearRect(0, 0, W, H);
+
+  const segments = [
+    { label: 'STRATEGY MEM', value: data.strategyMemory, color: '#FFB000', target: 0.4 },
+    { label: 'EVIDENCE REL', value: data.evidenceReliability, color: '#00E5FF', target: 0.3 },
+    { label: 'DEP SUPPORT', value: data.dependencySupport, color: '#00FF66', target: 0.3 },
+  ];
+
+  // Background rings
+  [0.25, 0.5, 0.75, 1.0].forEach(r => {
+    x.strokeStyle = '#111';
+    x.lineWidth = 1;
+    x.beginPath();
+    x.arc(cx, cy, R * r, 0, Math.PI * 2);
+    x.stroke();
+  });
+
+  // Donut segments
+  let startAngle = -Math.PI / 2;
+  segments.forEach(seg => {
+    const arc = Math.PI * 2 * seg.target;
+    const outerR = R * seg.value;
+    const innerR = R * 0.3;
+
+    // Background arc
+    x.strokeStyle = seg.color + '22';
+    x.lineWidth = (R - innerR);
+    x.beginPath();
+    x.arc(cx, cy, (R + innerR) / 2, startAngle, startAngle + arc);
+    x.stroke();
+
+    // Value arc
+    x.strokeStyle = seg.color;
+    x.lineWidth = (outerR - innerR);
+    x.beginPath();
+    x.arc(cx, cy, (outerR + innerR) / 2, startAngle, startAngle + arc);
+    x.stroke();
+
+    // Label
+    const midAngle = startAngle + arc / 2;
+    const lx = cx + Math.cos(midAngle) * (R + 18);
+    const ly = cy + Math.sin(midAngle) * (R + 18);
+    x.fillStyle = seg.color;
+    x.font = '8px JetBrains Mono';
+    x.textAlign = lx < cx ? 'right' : 'left';
+    x.fillText(seg.label, lx, ly - 4);
+    x.fillText(Math.round(seg.value * 100) + '%', lx, ly + 6);
+
+    startAngle += arc;
+  });
+
+  // Center value
+  const overall = segments.reduce((s, seg) => s + seg.value * seg.target, 0);
+  x.fillStyle = '#FFB000';
+  x.font = 'bold 18px JetBrains Mono';
+  x.textAlign = 'center';
+  x.fillText(overall.toFixed(2), cx, cy + 6);
+  x.fillStyle = '#444';
+  x.font = '8px JetBrains Mono';
+  x.fillText('OVERALL', cx, cy + 18);
+}
+
+// =====================
+// RENDER FUNCTIONS
+// =====================
+function renderHistorical(matches) {
+  const container = document.getElementById('historical-list');
+  const fallback = document.getElementById('fallback-banner');
+
+  if (!matches || matches.length === 0) {
+    fallback.classList.add('active');
+    container.innerHTML = '';
+    return;
+  }
+  fallback.classList.remove('active');
+
+  container.innerHTML = matches.map(m => {
+    const decay = Math.exp(-0.77 * m.ageYears / 5.0);
+    const decayPct = Math.round(decay * 100);
+    const aged = m.ageYears > 4;
+    return `
+      <div class="match-card flash">
+        <div class="match-header">
+          <span class="match-title">${m.id}</span>
+          <span class="match-score">${(m.similarity * 100).toFixed(1)}%</span>
+        </div>
+        <div style="font-size:9px;color:#555;margin-bottom:4px">${m.type} // ${m.location} // ${m.year}</div>
+        <div class="decay-bar-container">
+          <div class="decay-bar-label">
+            <span>TEMPORAL DECAY (λ=0.77, T=1825d)</span>
+            <span style="color:${aged?'var(--crimson)':'var(--amber)'}">${decayPct}%</span>
+          </div>
+          <div class="decay-bar"><div class="decay-fill ${aged?'aged':''}" style="width:${decayPct}%"></div></div>
+        </div>
+        <div style="font-size:9px;color:#555">Outcome: <span style="color:#888">${m.outcome}</span></div>
+      </div>`;
+  }).join('');
+}
+
+function renderPlan(plan) {
+  const container = document.getElementById('plan-content');
+  if (!plan) { container.innerHTML = '<div class="fallback-banner active">[NO PLAN — RUN PIPELINE]</div>'; return; }
+
+  container.innerHTML = `
+    <div class="plan-block">
+      <div class="plan-block-title">▸ Executive Summary</div>
+      <div class="plan-block-content">${plan.summary}</div>
+    </div>
+    ${plan.phases.map(p => `
+    <div class="plan-block">
+      <div class="plan-block-title">▸ ${p.phase}</div>
+      <div class="plan-block-content">${p.actions.map(a => `• ${a}`).join('<br>')}</div>
+    </div>`).join('')}
+    <div class="plan-block" style="border-left-color:var(--crimson-dim)">
+      <div class="plan-block-title" style="color:var(--crimson)">▸ Identified Risks</div>
+      <div class="plan-block-content">
+        ${plan.risks.map(r => `<span class="risk-tag risk-${r.severity}">${r.label}</span>`).join('')}
+      </div>
+    </div>
+    <div class="plan-block" style="border-left-color:${plan.approved?'var(--emerald-dim)':'var(--crimson-dim)'}">
+      <div class="plan-block-title" style="color:${plan.approved?'var(--emerald)':'var(--crimson)'}">
+        ${plan.approved ? '✓ REFLECTION APPROVED' : '✗ REFLECTION REJECTED'}
+      </div>
+    </div>`;
+}
+
+function renderCounterfactual(cf) {
+  document.getElementById('cf-actual').textContent = cf.actual || '—';
+  const altEl = document.getElementById('cf-alternate');
+  altEl.innerHTML = `
+    <div style="color:#555;margin-bottom:8px">${cf.reasoning}</div>
+    <div style="margin-bottom:8px">
+      ${cf.alternativeActions.map(a => `<div style="margin-bottom:3px;color:#444">→ ${a}</div>`).join('')}
+    </div>
+    <div style="border-top:1px solid #111;padding-top:8px">
+      ${Object.entries(cf.estimatedImpact).map(([k,v]) => 
+        `<div class="metric-row"><span class="metric-key">${k}</span><span class="metric-val" style="color:var(--emerald)">${v}</span></div>`
+      ).join('')}
+    </div>
+  `;
+  const gate = document.getElementById('cf-gate-warn');
+  gate.style.display = cf.confidence < 0.6 ? 'block' : 'none';
+}
+
+function renderContradictionBeam(score) {
+  const pct = Math.min(score * 100, 100);
+  document.getElementById('beam-marker').style.left = pct + '%';
+  document.getElementById('contra-val').textContent = score.toFixed(2);
+  const statusEl = document.getElementById('contra-status');
+  if (score > 0.5) {
+    statusEl.textContent = 'RED ALERT // CONTRADICTION'; statusEl.style.color = 'var(--crimson)';
+  } else if (score > 0.2) {
+    statusEl.textContent = 'AMBER CAUTION // REVIEW'; statusEl.style.color = 'var(--amber)';
+  } else {
+    statusEl.textContent = 'NOMINAL'; statusEl.style.color = 'var(--emerald)';
+  }
+}
+
+function renderCascade(chains) {
+  const container = document.getElementById('cascade-container');
+  if (!chains || chains.length === 0) { container.innerHTML = '<div style="font-size:9px;color:#333">NO CASCADE DATA</div>'; return; }
+
+  let html = '';
+  chains.forEach((c, i) => {
+    const severity = c.confidence > 0.8 ? 'active' : c.confidence > 0.6 ? 'warning' : 'ok';
+    const indent = i > 0 ? 'cascade-indent cascade-edge' : '';
+    html += `<div class="cascade-node ${severity} ${indent}">
+      <span style="flex:1;color:#555">${c.source || c.cause}</span>
+      <span style="color:#333;font-size:8px">→[${(c.confidence*100).toFixed(0)}%]→</span>
+      <span style="flex:1;text-align:right">${c.target || c.effect}</span>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+function renderAgentTraces(traces) {
+  const container = document.getElementById('agent-traces-container');
+  if (!traces) { container.innerHTML = ''; return; }
+
+  document.getElementById('trace-status').textContent = 'LIVE';
+  document.getElementById('trace-status').style.color = 'var(--emerald)';
+
+  container.innerHTML = AGENTS.map(ag => {
+    const t = traces[ag.id];
+    if (!t) return '';
+    const state = t.status || 'idle';
+    const color = state === 'finished' ? 'var(--emerald)' : state === 'computing' ? 'var(--cyan)' : state === 'failed' ? 'var(--crimson)' : '#333';
+    return `
+      <div class="agent-trace" id="trace-${ag.id}">
+        <div class="agent-trace-header" onclick="toggleTrace('${ag.id}')">
+          <span class="agent-trace-name" style="color:${color}">${ag.label.toUpperCase()}</span>
+          <span style="font-size:8px;color:${color}">${state.toUpperCase()} ${t.latency?t.latency+'ms':''}</span>
+        </div>
+        <div class="agent-trace-body" id="tbody-${ag.id}">
+          ${Object.entries(t).filter(([k]) => k !== 'status').map(([k,v]) => `
+            <div class="trace-row">
+              <span class="trace-key">${k}</span>
+              <span class="trace-val ${typeof v === 'boolean' ? (v?'ok':'fail') : ''}">${JSON.stringify(v)}</span>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderAgentTrace(id, toggle) {
+  const el = document.getElementById('tbody-' + id);
+  if (el && toggle) el.classList.toggle('open');
+  else if (el) el.classList.add('open');
+}
+
+function toggleTrace(id) {
+  renderAgentTrace(id, true);
+}
+
+function renderIntelligence(intel) {
+  if (!intel) return;
+  const { noveltyScore, confidencePenalty, confidenceBreakdown, emergingRisks, causalChains, overallConfidence } = intel;
+
+  document.getElementById('intel-novelty').textContent = noveltyScore.toFixed(2);
+  document.getElementById('intel-novelty-bar').style.width = (noveltyScore * 100) + '%';
+  document.getElementById('intel-penalty').textContent = '-' + Math.abs(confidencePenalty).toFixed(2);
+  document.getElementById('intel-strat').textContent = confidenceBreakdown.strategyMemory.toFixed(2);
+  document.getElementById('intel-strat-bar').style.width = (confidenceBreakdown.strategyMemory * 100) + '%';
+  document.getElementById('intel-ev').textContent = confidenceBreakdown.evidenceReliability.toFixed(2);
+  document.getElementById('intel-ev-bar').style.width = (confidenceBreakdown.evidenceReliability * 100) + '%';
+  document.getElementById('intel-overall').textContent = overallConfidence.toFixed(2);
+  document.getElementById('intel-overall').style.color = overallConfidence > 0.7 ? 'var(--emerald)' : overallConfidence > 0.5 ? 'var(--amber)' : 'var(--crimson)';
+
+  const riskPanel = document.getElementById('emerging-risks-panel');
+  riskPanel.innerHTML = emergingRisks.map(r => `
+    <div class="plan-block" style="border-left-color:${r.severity==='HIGH'?'var(--crimson-dim)':'var(--amber-dim)'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span class="risk-tag risk-${r.severity==='HIGH'?'high':'med'}">${r.severity}</span>
+        <span style="font-size:10px;color:var(--amber)">${(r.probability*100).toFixed(0)}%</span>
+      </div>
+      <div style="font-size:9px;color:#666">${r.risk}</div>
+    </div>`).join('');
+
+  const causalPanel = document.getElementById('causal-chains-panel');
+  causalPanel.innerHTML = causalChains.map(c => `
+    <div class="metric-row" style="padding:5px 0">
+      <span style="font-size:9px;color:#555;flex:1">${c.cause}</span>
+      <span style="font-size:8px;color:#333">→${(c.confidence*100).toFixed(0)}%→</span>
+      <span style="font-size:9px;color:var(--amber);flex:1;text-align:right">${c.effect}</span>
+    </div>`).join('');
+
+  drawConfidenceRadar(confidenceBreakdown);
+}
+
+// =====================
+// INDEX GRID
+// =====================
+function renderIndexGrid() {
+  const grid = document.getElementById('index-grid');
+  grid.innerHTML = ES_INDICES.map(idx => {
+    const count = MOCK_INDEX_COUNTS[idx] || 0;
+    return `
+      <div class="index-cell" onclick="selectIndex('${idx}')" id="idx-${idx.replace(/[^a-z0-9]/g,'-')}">
+        <div class="index-name">${idx}</div>
+        <div class="index-count">docs: <span>${count}</span></div>
+      </div>`;
+  }).join('');
+}
+
+function selectIndex(name) {
+  selectedIndex = name;
+  document.querySelectorAll('.index-cell').forEach(el => el.classList.remove('selected'));
+  document.getElementById('idx-' + name.replace(/[^a-z0-9]/g,'-'))?.classList.add('selected');
+  document.getElementById('inspector-idx-label').textContent = name;
+
+  const container = document.getElementById('index-docs-container');
+
+  if (mockEnabled) {
+    const docs = generateMockDocs(name, 5);
+    container.innerHTML = `<div class="section-label" style="padding:12px 12px 0">Latest documents // ${name}</div>
+      <div class="json-viewer" style="margin:10px;max-height:none">${docs}</div>`;
+    return;
+  }
+
+  container.innerHTML = '<div style="padding:12px;font-size:10px;color:#555">Loading...</div>';
+  fetch(`${BACKEND}/debug/docs/${name}`)
+    .then(r => r.json())
+    .then(data => {
+      const docs = data.docs || data;
+      container.innerHTML = `<div class="section-label" style="padding:12px 12px 0">Latest documents // ${name}</div>
+        <div class="json-viewer" style="margin:10px;max-height:none">${syntaxHighlight(JSON.stringify(docs, null, 2))}</div>`;
+    })
+    .catch(() => {
+      container.innerHTML = '<div class="fallback-banner active" style="margin:10px">BACKEND UNREACHABLE — ENABLE MOCK DATA</div>';
+    });
+}
+
+function generateMockDocs(indexName, count) {
+  const templates = {
+    'disaster-reports': () => ({ eventId: 'EVT-'+Math.random().toString(36).slice(2,10).toUpperCase(), type:'FLOOD', severity:'HIGH', waterLevel: (Math.random()*5+1).toFixed(1), timestamp: new Date().toISOString() }),
+    'strategy-memory': () => ({ strategyId: 'STG-'+Math.random().toString(36).slice(2,8).toUpperCase(), disasterType:'FLOOD', confidenceScore: (Math.random()*0.4+0.6).toFixed(2), successRate: (Math.random()*0.3+0.7).toFixed(2) }),
+    'counterfactual-memory': () => ({ eventId: 'EVT-'+Math.random().toString(36).slice(2,10).toUpperCase(), confidence: (Math.random()*0.3+0.7).toFixed(2), alternativeActions: ['pre-position teams','early evacuation'], stored: true }),
+  };
+  const gen = templates[indexName] || (() => ({ id: Math.random().toString(36).slice(2), index: indexName, data: 'mock', timestamp: new Date().toISOString() }));
+  const arr = Array.from({length: count}, () => gen());
+  return syntaxHighlight(JSON.stringify(arr, null, 2));
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+      let cls = 'json-num';
+      if (/^"/.test(match)) {
+        cls = /:$/.test(match) ? 'json-key' : 'json-str';
+      } else if (/true|false/.test(match)) {
+        cls = 'json-bool';
+      } else if (/null/.test(match)) {
+        cls = 'json-null';
+      }
+      return `<span class="${cls}">${match}</span>`;
+    });
+}
+
+// =====================
+// PAYLOAD SYNC
+// =====================
+function syncPayload() {
+  const payload = buildPayload();
+  document.getElementById('payload-editor').value = JSON.stringify(payload, null, 2);
+}
+
+function buildPayload() {
+  return {
+    eventId: 'EVT-' + Date.now().toString(36).toUpperCase(),
+    disaster: {
+      type: document.getElementById('disaster-type').value,
+      severity: document.getElementById('severity').value,
+    },
+    environment: {
+      waterLevel: parseFloat(document.getElementById('water-level').value),
+      rainfall: parseFloat(document.getElementById('rainfall').value),
+      trend: 'rising',
+    },
+    population: {
+      affectedPopulation: parseInt(document.getElementById('pop-aff').value),
+    },
+    infrastructure: {
+      roadsAffected: parseInt(document.getElementById('roads').value),
+      damageBitmask: parseInt(document.getElementById('infra-mask').value),
+    },
+    observations: [
+      document.getElementById('src-news').value,
+      document.getElementById('src-gov').value,
+    ],
+    metadata: { submittedAt: new Date().toISOString(), source: 'DRIS-CMD' },
+  };
+}
+
+function updateSlider(valId, val, suffix='', divisor=1, prefix='', binary=false) {
+  const el = document.getElementById(valId);
+  if (binary) {
+    el.textContent = '0b' + parseInt(val).toString(2).padStart(8,'0');
+  } else if (suffix === 'k') {
+    el.textContent = (val / divisor).toFixed(1) + 'k';
+  } else {
+    el.textContent = prefix + val;
+  }
+}
+
+// =====================
+// RUN AGENT
+// =====================
+async function runAgent(mode) {
+  const banner = document.getElementById('running-banner');
+  const textEl = document.getElementById('running-text');
+  banner.classList.add('active');
+
+  const sequence = ['orchestrator', 'historical', 'learning', 'planning', 'reflection', 'counterfactual'];
+  agentStates = {};
+
+  // Set all idle
+  sequence.forEach(id => agentStates[id] = 'idle');
+
+  if (mockEnabled) {
+    textEl.textContent = 'PIPELINE EXECUTING — MOCK MODE ACTIVE...';
+    // Simulate agent pipeline
+    for (let i = 0; i < sequence.length; i++) {
+      agentStates[sequence[i]] = 'computing';
+      await delay(300 + Math.random() * 400);
+      agentStates[sequence[i]] = 'finished';
+    }
+    currentResult = MOCK_RESULT;
+    renderResults(currentResult);
+    banner.classList.remove('active');
+    return;
+  }
+
+  // Real API call
+  textEl.textContent = mode === 'full' ? 'EXECUTING /run-full-workflow...' : 'EXECUTING /run-agent...';
+  agentStates['orchestrator'] = 'computing';
+
+  try {
+    let payload;
+    try { payload = JSON.parse(document.getElementById('payload-editor').value); }
+    catch { payload = buildPayload(); }
+
+    const endpoint = mode === 'full' ? '/run-full-workflow' : '/run-agent';
+    const res = await fetch(BACKEND + endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    sequence.forEach(id => agentStates[id] = 'computing');
+    const data = await res.json();
+    sequence.forEach(id => agentStates[id] = 'finished');
+    currentResult = data;
+    renderResults(data);
+  } catch (err) {
+    sequence.forEach(id => agentStates[id] = 'failed');
+    currentResult = null;
+    document.getElementById('plan-content').innerHTML = `<div class="fallback-banner active">
+      [PIPELINE ERROR — BACKEND UNREACHABLE]<br>${err.message}
+    </div>`;
+  }
+
+  banner.classList.remove('active');
+}
+
+function renderResults(data) {
+  if (!data) return;
+  const r = mockEnabled ? MOCK_RESULT : data;
+
+  renderHistorical(r.historicalMatches || r.matches || []);
+  renderPlan(r.responsePlan || r.plan);
+  renderCounterfactual(r.counterfactual || {});
+  renderAgentTraces(r.agentTraces || {});
+
+  const intel = r.intelligence || {};
+  renderContradictionBeam(intel.contradictionScore || 0);
+  renderCascade(intel.dependencyChains || intel.causalChains || []);
+  renderIntelligence(intel);
+
+  document.getElementById('trace-status').textContent = 'COMPLETE';
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// =====================
+// UI CONTROLS
+// =====================
+function switchView(view) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  document.getElementById('main-ops').style.display = view === 'ops' ? 'grid' : 'none';
+  const mem = document.getElementById('main-memory');
+  mem.style.display = view === 'memory' ? 'grid' : 'none';
+  const intel = document.getElementById('main-intelligence');
+  intel.style.display = view === 'intelligence' ? 'grid' : 'none';
+}
+
+function switchCenterTab(tab) {
+  document.querySelectorAll('.center-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.querySelectorAll('.center-view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+
+  if (tab === 'graph') { resizeCanvas(); }
+}
+
+function toggleMock(on) {
+  mockEnabled = on;
+  const status = document.querySelector('.system-status span');
+  status.textContent = on ? 'MOCK MODE ACTIVE' : 'SYSTEM NOMINAL';
+}
+
+// =====================
+// INIT
+// =====================
+window.addEventListener('load', () => {
+  syncPayload();
+  initCanvas();
+  renderIndexGrid();
+  renderAgentTraces(null);
+
+  // Render default mock state
+  renderHistorical([]);
+  drawConfidenceRadar({ strategyMemory: 0.5, evidenceReliability: 0.5, dependencySupport: 0.5 });
+  renderCascade([]);
+  renderContradictionBeam(0);
+});
+</script>
+
+</body>
+</html>
