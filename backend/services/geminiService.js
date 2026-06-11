@@ -1,4 +1,4 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenAI } from '@google/genai';
 import { GEMINI } from '../config/index.js';
 import path from 'path';
 import fs from 'fs';
@@ -7,7 +7,6 @@ import fs from 'fs';
 // ENVIRONMENT AUTHENTICATION LAYER (DYNAMIC FOR LOCAL & RENDER PRODUCTION)
 // ============================================================================
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-    // Production (Render Environment Variables Setup)
     try {
         fs.writeFileSync('/tmp/google-creds.json', process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
         process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-creds.json';
@@ -15,13 +14,12 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
         console.error('[Vertex Setup Error] Failed to write temporary credentials disk file:', err.message);
     }
 } else {
-    // Local Development Default Pathing Configuration
     process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve('./project-credentials.json');
 }
 
 /**
- * Server-side Vertex AI (Gemini) integration for disaster response planning.
- * Resolves location/datacenter block policies natively by shifting to Vertex.
+ * Modern Server-side Gemini integration via Vertex AI platform configuration.
+ * Avoids both legacy geofencing rules and 2026 SDK deprecation blocks.
  */
 export class GeminiService {
     /**
@@ -29,25 +27,20 @@ export class GeminiService {
      * @param {string} [modelName]
      */
     constructor(gcpProjectId = null, modelName = GEMINI.model) {
-        if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !gcpProjectId) {
+        if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
             throw new Error(
-                'Vertex Authentication setup is incomplete. Ensure project-credentials.json exists locally or GOOGLE_APPLICATION_CREDENTIALS_JSON is configured on Render.'
+                'Authentication setup is incomplete. Ensure project-credentials.json exists locally or GOOGLE_APPLICATION_CREDENTIALS_JSON is configured on Render.'
             );
         }
 
-        // Initialize Vertex Client Framework
-        const vertexAI = new VertexAI({ 
-            project: gcpProjectId || 'luminous-slice-429713-d9', 
-            location: 'us-central1' 
+        // Initialize the modern Unified SDK specifying Vertex AI mode
+        this.ai = new GoogleGenAI({
+            vertex: true,
+            project: gcpProjectId || 'luminous-slice-429713-d9',
+            location: 'us-central1'
         });
 
-        // Initialize model target with system-configured properties
-        this.model = vertexAI.getGenerativeModel({
-            model: modelName || 'gemini-2.5-flash',
-            generationConfig: {
-                responseMimeType: 'application/json',
-            },
-        });
+        this.modelName = modelName || 'gemini-2.5-flash';
     }
 
     /**
@@ -55,21 +48,25 @@ export class GeminiService {
      * @private
      */
     async _generateAndParse(prompt) {
-        const result = await this.model.generateContent({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        // Modern method syntax call structure
+        const response = await this.ai.models.generateContent({
+            model: this.modelName,
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+            }
         });
 
-        const candidate = result.response?.candidates?.[0];
-        const text = candidate?.content?.parts?.[0]?.text;
+        const text = response.text;
 
         if (!text) {
-            throw new Error('Received empty generation contents chunk from Vertex API service layer.');
+            throw new Error('Received empty generation contents chunk from Google Gen AI layer.');
         }
 
         try {
             return JSON.parse(text.trim());
         } catch (error) {
-            throw new Error(`Failed to parse Vertex tracking execution return as JSON payload: ${error.message}\nRaw response: ${text}`);
+            throw new Error(`Failed to parse tracking execution return as JSON payload: ${error.message}\nRaw response: ${text}`);
         }
     }
 
