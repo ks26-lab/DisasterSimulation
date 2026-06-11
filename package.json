@@ -6,6 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "serve:dist": "node serve-dist.js",
     "start": "node backend/server.js",
     "start:legacy": "node server.js",
     "create:disaster-index": "node backend/scripts/createDisasterIndex.js",
