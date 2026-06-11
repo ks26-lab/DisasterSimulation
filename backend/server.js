@@ -26,8 +26,11 @@ app.get('/health', (_req, res) => {
 app.use('/', disasterRoutes);
 app.use('/debug', debugRoutes);
 
-app.use((_req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
+app.get('/', (_req, res) => {
+    res.json({
+        success: true,
+        service: 'disaster-response-agent-backend'
+    });
 });
 
 app.use((err, _req, res, _next) => {
