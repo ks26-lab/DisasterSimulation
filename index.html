@@ -1,154 +1,429 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Disaster Simulation UI Fixed</title>
-<style>
-:root{
---primary:#667eea;
---secondary:#764ba2;
---text:#1f2937;
---muted:#6b7280;
---card-bg:rgba(255,255,255,.96);
---radius:20px;
---shadow:0 10px 30px rgba(0,0,0,.15);
-}
-*{margin:0;padding:0;box-sizing:border-box;}
-body{
-font-family:Segoe UI,sans-serif;
-background:linear-gradient(135deg,#667eea,#764ba2);
-min-height:100vh;
-color:var(--text);
-}
-#cesiumContainer{position:fixed;inset:0;z-index:1;}
-.overlay{position:relative;z-index:1000;padding:24px;}
-.hero{
-max-width:1400px;margin:0 auto 24px;
-background:var(--card-bg);
-padding:30px 40px;
-border-radius:24px;
-box-shadow:var(--shadow);
-}
-.hero h1{font-size:2.5rem;margin-bottom:10px;}
-.hero p{color:var(--muted);}
-.dashboard-grid{
-display:grid;
-grid-template-columns:320px 1fr 360px;
-gap:24px;
-max-width:1400px;
-margin:auto;
-align-items:start;
-}
-.right-column{
-display:flex;
-flex-direction:column;
-gap:24px;
-}
-.panel{
-background:var(--card-bg);
-padding:24px;
-border-radius:20px;
-box-shadow:var(--shadow);
-}
-.panel h3{
-margin-bottom:20px;
-padding-bottom:10px;
-border-bottom:2px solid var(--primary);
-}
-.metric{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:14px;
-margin-bottom:12px;
-background:#fff;
-border-radius:12px;
-border:1px solid #e5e7eb;
-}
-label{display:block;margin:14px 0 6px;font-weight:600;}
-input{
-width:100%;
-padding:12px;
-border-radius:10px;
-border:1px solid #dbeafe;
-}
-button{
-width:100%;
-height:48px;
-margin-top:12px;
-border:none;
-border-radius:10px;
-background:linear-gradient(135deg,var(--primary),var(--secondary));
-color:#fff;
-cursor:pointer;
-}
-.dashboard-panel{min-height:420px;}
-.agent-panel{min-height:520px;}
-.info-box{
-margin-top:12px;
-padding:14px;
-background:#fff;
-border:1px solid #e5e7eb;
-border-radius:12px;
-max-height:180px;
-overflow-y:auto;
-}
-@media(max-width:1200px){
-.dashboard-grid{grid-template-columns:1fr;}
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DRIS // Disaster Response Intelligence System</title>
+  <link rel="stylesheet" href="/src/index.css">
 </head>
 <body>
-<div id="cesiumContainer"></div>
-<div class="overlay">
-<div class="hero">
-<h1>Disaster Simulation Command Center</h1>
-<p>Monitor flood risk, population impact and AI observations in real time.</p>
-</div>
-<div class="dashboard-grid">
-<div class="panel">
-<h3>Flood Controls</h3>
-<label>Rainfall (mm/hr)</label>
-<input type="number" id="rainfall" value="50">
-<label>River Flow</label>
-<input type="number" id="riverFlow" value="20">
-<label>Drainage Capacity</label>
-<input type="number" id="drainage" value="10">
-<button id="startBtn">Start Simulation</button>
-<button id="pauseBtn">Pause Simulation</button>
-<button id="resetBtn">Reset Simulation</button>
-</div>
 
-<div class="panel">
-<h3>Simulation View</h3>
-<p>Cesium simulation canvas will render behind this dashboard.</p>
-</div>
+  <div class="shell">
 
-<div class="right-column">
-<div class="panel dashboard-panel">
-<h3>Disaster Dashboard</h3>
-<div class="metric"><span>Water Level</span><span id="waterDisplay">0</span></div>
-<div class="metric"><span>Risk Level</span><span id="riskDisplay">LOW</span></div>
-<div class="metric"><span>Population</span><span id="populationDisplay">0</span></div>
-<div class="metric"><span>Recommendation</span><span id="recommendationDisplay">None</span></div>
-<div class="metric"><span>Recovery</span><span id="recoveryDisplay">No</span></div>
-<div class="metric"><span>Simulation Time</span><span id="timeDisplay">--</span></div>
-</div>
+    <!-- TOPBAR HEADER -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="logo">DRIS<span>//</span>CMD</div>
+        <div class="system-status">
+          <div class="status-dot pulse" id="status-dot"></div>
+          <span id="status-text">SYSTEM NOMINAL</span>
+        </div>
+        <nav class="nav-tabs">
+          <button class="nav-tab active" id="tab-ops">OPS CENTER</button>
+          <button class="nav-tab" id="tab-memory">MEMORY AUDIT</button>
+          <button class="nav-tab" id="tab-intelligence">INTELLIGENCE</button>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <label class="mock-toggle" title="Toggle Mock Data Mode">
+          <span style="opacity: 0.7">MOCK DATA</span>
+          <span class="toggle-switch">
+            <input type="checkbox" id="mock-toggle" checked>
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
+        <span>BACKEND: <span style="color:var(--primary)" id="backend-url">localhost:3000</span></span>
+        <span class="clock" id="clock">--:--:-- UTC</span>
+      </div>
+    </header>
 
-<div class="panel agent-panel">
-<h3>Observation Agent</h3>
-<div class="metric"><span>Trend</span><span id="trendDisplay">STABLE</span></div>
-<div class="metric"><span>Latest Event</span><span id="eventDisplay">None</span></div>
-<div class="metric"><span>Summary</span><span id="summaryDisplay">Waiting...</span></div>
-<h4>AI Observation</h4>
-<div class="info-box" id="geminiObservation">Waiting for observation...</div>
-<h4 style="margin-top:16px;">Event Log</h4>
-<div class="info-box" id="eventLogDisplay">No events yet</div>
-</div>
-</div>
-</div>
-</div>
-<script type="module" src="/src/main.js"></script>
+    <!-- CONTENT VIEWS CONTAINER -->
+    <main style="flex:1; overflow:hidden; position:relative;">
+
+      <!-- 1. OPERATIONS CENTER (OPS) VIEW -->
+      <section class="main-view ops-grid" id="view-ops-container">
+        
+        <!-- Left Panel: Telemetry Input & Simulation controls -->
+        <aside class="panel">
+          <div class="panel-header">
+            <span class="panel-title">// Telemetry Deck</span>
+            <span class="panel-badge badge-cyan" id="sim-badge">STANDBY</span>
+          </div>
+          <div class="panel-body">
+            
+            <div class="section-label">Simulation Control</div>
+            <div class="sim-controls">
+              <button class="sim-btn" id="sim-start">Start</button>
+              <button class="sim-btn" id="sim-pause">Pause</button>
+              <button class="sim-btn" id="sim-reset">Reset</button>
+            </div>
+
+            <div class="section-label">Data Feeds</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:8px">
+              <div class="terminal-block">
+                <label>NEWS_API</label>
+                <input type="text" class="terminal-input" value="Reuters, AP" id="src-news">
+              </div>
+              <div class="terminal-block">
+                <label>GOV_FEEDS</label>
+                <input type="text" class="terminal-input" value="NDMA, IMD" id="src-gov">
+              </div>
+              <div class="terminal-block">
+                <label>WEATHER_IOT</label>
+                <input type="text" class="terminal-input" value="0xF2, 0xA4" id="src-iot">
+              </div>
+              <div class="terminal-block">
+                <label>SAT_GIS</label>
+                <input type="text" class="terminal-input" value="INSAT-3D" id="src-sat">
+              </div>
+            </div>
+
+            <div class="section-label">Event Parameters</div>
+            <div class="terminal-block">
+              <label>Disaster Type</label>
+              <select class="terminal-select" id="disaster-type">
+                <option value="FLOOD">FLOOD</option>
+                <option value="EARTHQUAKE">EARTHQUAKE</option>
+                <option value="CYCLONE">CYCLONE</option>
+                <option value="INFRASTRUCTURE_FAILURE">INFRA_FAILURE</option>
+                <option value="FIRE">FIRE</option>
+              </select>
+            </div>
+            <div class="terminal-block">
+              <label>Severity</label>
+              <select class="terminal-select" id="severity">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM" selected>MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+                <option value="CRITICAL">CRITICAL</option>
+              </select>
+            </div>
+
+            <!-- Parameters Sliders -->
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label">Water Level</span>
+                <span class="slider-val" id="water-level-val">10.0 m</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="200" step="0.1" value="10.0" id="water-level">
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label">Rainfall</span>
+                <span class="slider-val" id="rainfall-val">50 mm</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="500" value="50" id="rainfall">
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label">River Flow</span>
+                <span class="slider-val" id="riverflow-val">20 m³/s</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="200" value="20" id="riverflow">
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label">Drainage Capacity</span>
+                <span class="slider-val" id="drainage-val">10 m³/s</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="200" value="10" id="drainage">
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label">Affected Pop.</span>
+                <span class="slider-val" id="pop-aff-val">0</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="100000" step="100" value="0" id="pop-aff">
+              </div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="slider-label text-muted">Infrastructure Bitmask</span>
+                <span class="slider-val" id="infra-mask-val">0b00000000</span>
+              </div>
+              <div class="slider-container">
+                <input type="range" min="0" max="255" value="0" id="infra-mask">
+              </div>
+            </div>
+
+            <div class="section-label">Raw Report Payload</div>
+            <textarea class="payload-editor" id="payload-editor" spellcheck="false"></textarea>
+
+            <div class="cmd-split">
+              <button class="cmd-btn cmd-btn-amber" id="btn-legacy">
+                ▶ RUN AGENT<span>Legacy Workflow</span>
+              </button>
+              <button class="cmd-btn cmd-btn-cyan" id="btn-full">
+                ⚡ RUN FULL<span>Cognitive Architecture</span>
+              </button>
+            </div>
+
+          </div>
+        </aside>
+
+        <!-- Center Column: 3D Map + HUD Overlays -->
+        <div class="map-column">
+          <!-- 3D map container -->
+          <div id="cesiumContainer"></div>
+
+          <!-- Floating HUD elements -->
+          <div class="map-hud">
+            
+            <!-- Running Banner indicator -->
+            <div class="running-banner" id="running-banner">
+              <div class="spinner"></div>
+              <span id="running-text">PIPELINE EXECUTING — AWAITING AGENT HANDOFF...</span>
+            </div>
+
+            <!-- Tab overlay controls -->
+            <div class="center-tabs-hud">
+              <button class="center-tab" id="overlay-tab-historical">Historical</button>
+              <button class="center-tab" id="overlay-tab-counterfactual">Counterfactual</button>
+              <button class="center-tab" id="overlay-tab-plan">Response Plan</button>
+            </div>
+
+          </div>
+
+          <!-- Bottom HUD Overlay Container -->
+          <div class="hud-center-overlay" id="hud-center-overlay">
+            <div class="hud-overlay-header">
+              <span id="hud-overlay-title">Analysis Records</span>
+              <span class="hud-overlay-close" id="hud-overlay-close">&times; Close</span>
+            </div>
+            <div class="hud-overlay-body">
+              
+              <!-- Historical list -->
+              <div class="center-view" id="view-historical">
+                <div class="fallback-banner active" id="fallback-historical">
+                  NO HISTORIC RECORDS RETRIEVED
+                </div>
+                <div class="historical-flex" id="historical-list"></div>
+              </div>
+
+              <!-- Counterfactual timelines -->
+              <div class="center-view" id="view-counterfactual">
+                <div class="cf-compare">
+                  <div class="cf-lane">
+                    <div class="cf-lane-header" style="color:var(--primary)">◈ ACTUAL TIMELINE</div>
+                    <div class="cf-lane-body" id="cf-actual">Waiting for pipeline execution...</div>
+                  </div>
+                  <div class="cf-lane">
+                    <div class="cf-lane-header" style="color:var(--amber)">◇ COUNTERFACTUAL PATH</div>
+                    <div id="cf-gate-warn" class="cf-gate-warning" style="display:none">
+                      ⚠ CONFIDENCE BELOW 0.6 GATE — ALTERNATE ROUTE FLAGGED
+                    </div>
+                    <div class="cf-lane-body" id="cf-alternate">Waiting for pipeline execution...</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Response Plan -->
+              <div class="center-view" id="view-plan">
+                <div class="fallback-banner active" id="fallback-plan">
+                  NO ACTION PLAN GENERATED — RUN THE PIPELINE FIRST
+                </div>
+                <div class="plan-flex" id="plan-content"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Panel: Agent Traces & Analytics Gauges -->
+        <aside class="panel right">
+          <div class="panel-header">
+            <span class="panel-title">// Agent Deck</span>
+            <span class="panel-badge badge-amber" id="trace-badge">STANDBY</span>
+          </div>
+          <div class="panel-body">
+            
+            <div class="section-label">Cognitive Agent Graph</div>
+            <div class="graph-container">
+              <canvas id="agent-canvas"></canvas>
+            </div>
+
+            <div class="section-label">Live Thought Traces</div>
+            <div id="agent-traces-container">
+              <div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); text-align:center; padding:12px">
+                No active thought traces. Run agent to observe handoff sequence.
+              </div>
+            </div>
+
+            <div class="section-label">Contradiction Index</div>
+            <div class="beam-container">
+              <div class="beam-value" id="contra-val">0.00</div>
+              <div class="beam-status" id="contra-status">NOMINAL</div>
+              <div class="beam-track">
+                <div class="beam-marker" id="beam-marker" style="left:0%"></div>
+              </div>
+              <div class="beam-labels">
+                <span>0.0</span>
+                <span style="color:var(--amber)">0.2 CAUTION</span>
+                <span style="color:var(--crimson)">0.5 ALERT</span>
+                <span>1.0</span>
+              </div>
+            </div>
+
+            <div class="section-label">Confidence Attribution</div>
+            <canvas id="confidence-canvas" width="300" height="180"></canvas>
+
+            <div class="section-label">Infrastructure Cascades</div>
+            <div class="cascade-container" id="cascade-container">
+              <div class="cascade-node ok">
+                <span style="flex:1">Hospital Infrastructure</span>
+                <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
+              </div>
+              <div class="cascade-node ok">
+                <span style="flex:1">Educational Facilities</span>
+                <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
+              </div>
+              <div class="cascade-node ok">
+                <span style="flex:1">River Bridge Network</span>
+                <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
+              </div>
+            </div>
+
+          </div>
+        </aside>
+
+      </section>
+
+      <!-- 2. MEMORY AUDIT VIEW -->
+      <section class="main-view memory-grid" id="view-memory-container" style="display:none">
+        
+        <!-- Left panel: Indices list -->
+        <aside class="panel" style="border-right:1px solid var(--border-panel)">
+          <div class="panel-header">
+            <span class="panel-title">// Elasticsearch Indices</span>
+            <span class="panel-badge badge-cyan">AUDITOR</span>
+          </div>
+          <div class="panel-body">
+            <div class="section-label">Index Registry</div>
+            <div class="index-grid" id="index-grid">
+              <!-- Rendered Dynamically -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right panel: Document inspector -->
+        <div class="panel" style="border:none">
+          <div class="panel-header">
+            <span class="panel-title">// Document Inspector</span>
+            <span class="panel-badge badge-emerald" id="inspector-idx-label">SELECT AN INDEX</span>
+          </div>
+          <div class="panel-body" style="padding: 16px 20px;">
+            <div id="index-docs-container" style="height:100%">
+              <div class="fallback-banner active">
+                SELECT A MEMORY INDEX FROM THE REGISTRY TO AUDIT RECORDED PAYLOADS
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- 3. INTELLIGENCE VIEW -->
+      <section class="main-view intel-grid" id="view-intelligence-container" style="display:none">
+        
+        <!-- Column 1: Composite novelty metrics -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">// Novelty & Weighting</span>
+            <span class="panel-badge badge-amber">METRICS</span>
+          </div>
+          <div class="panel-body">
+            
+            <div class="section-label">Novelty Score</div>
+            <div class="metric-row">
+              <span class="metric-key">Composite Novelty</span>
+              <span class="metric-val" id="intel-novelty">0.00</span>
+            </div>
+            <div class="micro-bar"><div class="micro-bar-fill" id="intel-novelty-bar" style="width:0%"></div></div>
+
+            <div class="metric-row">
+              <span class="metric-key">Confidence Penalty</span>
+              <span class="metric-val" id="intel-penalty" style="color:var(--crimson)">0.00</span>
+            </div>
+            
+            <div class="metric-row">
+              <span class="metric-key">Strategy Support</span>
+              <span class="metric-val" id="intel-strat">0.00</span>
+            </div>
+            <div class="micro-bar"><div class="micro-bar-fill" id="intel-strat-bar" style="width:0%"></div></div>
+
+            <div class="section-label">Evidence Metrics</div>
+            <div class="metric-row">
+              <span class="metric-key">Evidence Reliability</span>
+              <span class="metric-val" id="intel-ev">0.00</span>
+            </div>
+            <div class="micro-bar"><div class="micro-bar-fill" id="intel-ev-bar" style="width:0%"></div></div>
+
+            <div class="metric-row">
+              <span class="metric-key">Verification Sources</span>
+              <span class="metric-val" id="intel-srcs">0</span>
+            </div>
+
+            <div class="section-label">Attribution Confidence</div>
+            <div class="overall-confidence-big" id="intel-overall">--</div>
+            <div style="text-align:center; font-size:10px; color:var(--text-muted); font-family:var(--font-mono)">
+              WEIGHTED DECISION INDEX
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Column 2: Risk radar -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">// Emerging Risk Radar</span>
+            <span class="panel-badge badge-crimson">RISK INDEX</span>
+          </div>
+          <div class="panel-body" id="emerging-risks-panel">
+            <div class="fallback-banner active">
+              NO ANOMALOUS RISKS DETECTED — RUN WORKFLOW TO EVALUATE
+            </div>
+          </div>
+        </div>
+
+        <!-- Column 3: Causal logic -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">// Causal Dependency Inference</span>
+            <span class="panel-badge badge-amber">LINEAGE</span>
+          </div>
+          <div class="panel-body" id="causal-chains-panel">
+            <div class="fallback-banner active">
+              NO CAUSAL INFERENCES COMPILED — PIPELINE IDLE
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <div class="tooltip" id="tooltip"></div>
+
+  <!-- LOAD MAIN JS MODULE -->
+  <script type="module" src="/src/main.js"></script>
+
 </body>
 </html>
