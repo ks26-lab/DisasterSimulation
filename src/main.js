@@ -4,7 +4,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 // =====================
 // CONSTANTS & CONFIG
 // =====================
-const BACKEND = 'http://localhost:3000';
+const BACKEND = 'https://disastersimulation.onrender.com';
 
 const ES_INDICES = [
   'disaster-reports',
