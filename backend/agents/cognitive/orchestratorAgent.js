@@ -74,12 +74,17 @@ export class OrchestratorAgent {
         const historicalMatches = retrievalResult.matches;
 
         // Give a minor delay before calling the next agent to stagger API usage
-        await pace(1000);
+        await pace(5000);
 
-        const generatedPlan = await this.planningAgent.generatePlan(
-            report,
-            historicalMatches
-        );
+        console.log(
+    '[Workflow] Running Planning Agent'
+);
+
+const generatedPlan =
+    await this.planningAgent.generatePlan(
+        report,
+        historicalMatches
+    );
 
         await this.elasticService.storePlan({
             eventId,
@@ -167,23 +172,47 @@ export class OrchestratorAgent {
         ]);
 
         // Stagger downstream LLM evaluations to satisfy the 5 requests-per-minute threshold
-        await pace(1500);
+        await pace(5000);
         const detectedGaps = await this.knowledgeGapDetector.detectGaps(report, historicalMatches).catch(() => null);
         
-        await pace(1500);
+        await pace(5000);
         const discoveredDependencies = await this.dependencyDiscoveryService.discoverAndStoreDependencies(report, historicalMatches).catch(() => null);
         
-        await pace(1500);
+        await pace(5000);
         const operationalIntelligence = await this.operationalIntelligenceService.generateIntelligence(report).catch(() => null);
 
         // 2. Learning Agent
-        await pace(1500);
+        await pace(5000);
         workflowTrace.timestamps.learningStarted = new Date().toISOString();
-        const rawLearningInsights = await this.learningAgent.learn(
-            historicalMatches.map((m) => m.source),
+       console.log(
+    '[Workflow] Running Learning Agent'
+);
+
+let rawLearningInsights;
+
+try {
+    rawLearningInsights =
+        await this.learningAgent.learn(
+            historicalMatches.map(
+                (m) => m.source
+            ),
             historicalPlans,
             historicalOutcomes
         );
+} catch (error) {
+    console.error(
+        '[LearningAgent Failed]',
+        error
+    );
+
+    rawLearningInsights = {
+        successfulStrategies: [],
+        failedStrategies: [],
+        recommendations: [],
+        confidence: 0.1,
+        error: error.message
+    };
+}
 
         const learningInsights = {
             ...rawLearningInsights,
@@ -195,24 +224,71 @@ export class OrchestratorAgent {
         workflowTrace.timestamps.learningFinished = new Date().toISOString();
 
         // 3. Planning Agent (with learning insights compiled)
-        await pace(1500);
+        await pace(5000);
         workflowTrace.timestamps.planningStarted = new Date().toISOString();
-        const generatedPlan = await this.planningAgent.generatePlan(
+        let generatedPlan;
+
+try {
+    generatedPlan =
+        await this.planningAgent.generatePlan(
             report,
             historicalMatches,
             learningInsights
         );
+} catch (error) {
+    console.error(
+        '[PlanningAgent Failed]',
+        error
+    );
+
+    generatedPlan = {
+        summary:
+            'Fallback plan generated because Gemini failed.',
+        recommendedActions: [],
+        priority: 'MEDIUM',
+        reasoning: error.message,
+        confidence: 0.1,
+        metadata: {
+            fallback: true,
+            generatedAt:
+                new Date().toISOString()
+        }
+    };
+}
         workflowTrace.timestamps.planningFinished = new Date().toISOString();
 
         // 4. Reflection Agent
-        await pace(1500);
+        await pace(5000);
         workflowTrace.timestamps.reflectionStarted = new Date().toISOString();
-        const reflection = await this.reflectionAgent.reviewPlan(
+        console.log(
+    '[Workflow] Running Reflection Agent'
+);
+
+let reflection;
+
+try {
+    reflection =
+        await this.reflectionAgent.reviewPlan(
             report,
             historicalMatches,
             generatedPlan
         );
-        workflowTrace.timestamps.reflectionFinished = new Date().toISOString();
+} catch (error) {
+    console.error(
+        '[ReflectionAgent Failed]',
+        error
+    );
+
+    reflection = {
+        risks: [],
+        weaknesses: [],
+        missingActions: [],
+        improvements: [],
+        approved: false,
+        confidence: 0.1,
+        error: error.message
+    };
+}
 
         // 5. Compute overall confidence metrics
         const lConf = learningInsights.confidence ?? 0.8;

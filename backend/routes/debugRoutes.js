@@ -1,9 +1,41 @@
 import { Router } from 'express';
 import { ElasticSearchService } from '../services/elastic-service.js';
+import { GeminiService } from '../services/geminiService.js';
 
 const router = Router();
 const elasticService = new ElasticSearchService();
 
+/**
+ * Gemini connectivity test
+ */
+router.get('/gemini-test', async (req, res) => {
+    try {
+        const gemini = new GeminiService();
+
+        const result =
+            await gemini.generateResponsePlan(
+                {
+                    disaster: {
+                        type: 'TEST'
+                    }
+                },
+                []
+            );
+
+        res.json({
+            success: true,
+            result
+        });
+    } catch (error) {
+        console.error('[gemini-test]', error);
+
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            stack: error.stack
+        });
+    }
+});
 /**
  * Return all Elasticsearch indices.
  */
@@ -72,6 +104,15 @@ router.get('/health', async (req, res) => {
             error: err.message
         });
     }
+});
+
+router.get('/mapping/:index', async (req, res) => {
+    const mapping =
+        await elasticService.client.indices.getMapping({
+            index: req.params.index
+        });
+
+    res.json(mapping);
 });
 
 export default router;

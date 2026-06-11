@@ -137,6 +137,16 @@ export class ElasticSearchService {
         overallConfidence = null,
         createdAt = new Date().toISOString(),
     }) {
+        console.log(
+    '[STORE PLAN REPORT]',
+    JSON.stringify(report, null, 2)
+);
+
+console.log(
+    '[LOCATION TYPE]',
+    typeof report.location,
+    report.location
+);
         return await this.client.index({
             index: this.plansIndex,
             id: eventId,

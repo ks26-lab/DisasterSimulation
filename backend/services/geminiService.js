@@ -11,49 +11,91 @@ export class GeminiService {
      * @param {string} [modelName]
      */
     constructor(apiKey = null, modelName = GEMINI.model) {
-        const resolvedApiKey = apiKey || process.env.GEMINI_API_KEY;
-        
-        if (!resolvedApiKey) {
-            throw new Error(
-                'Gemini API key is required. Ensure GEMINI_API_KEY is configured on Render.'
-            );
-        }
+    const resolvedApiKey =
+        apiKey || process.env.GEMINI_API_KEY;
 
-        // Initialize the standard SDK, but route traffic through corsproxy.io
-        // This free endpoint strips Render's data-center geofence blocks instantly
-        this.ai = new GoogleGenAI({
-            apiKey: resolvedApiKey,
-            baseURL: 'https://corsproxy.io/?url=https://generativelanguage.googleapis.com'
-        });
-
-        this.modelName = modelName || 'gemini-2.5-flash';
+    if (!resolvedApiKey) {
+        throw new Error(
+            'Gemini API key is required. Ensure GEMINI_API_KEY is configured.'
+        );
     }
+
+    this.ai = new GoogleGenAI({
+        apiKey: resolvedApiKey
+    });
+
+    this.modelName =
+        modelName || 'gemini-2.5-flash';
+}
 
     /**
      * Helper to safely execute model generations and parse response content
      * @private
      */
     async _generateAndParse(prompt) {
+    try {
         const response = await this.ai.models.generateContent({
             model: this.modelName,
             contents: prompt,
             config: {
-                responseMimeType: 'application/json',
+                responseMimeType: 'application/json'
             }
         });
 
-        const text = response.text;
+        console.log(
+            '[Gemini Raw Response]',
+            JSON.stringify(response, null, 2)
+        );
+
+        const text =
+            typeof response.text === 'function'
+                ? response.text()
+                : response.text;
 
         if (!text) {
-            throw new Error('Received empty generation contents chunk from Google Gen AI layer.');
+            throw new Error(
+                'Gemini returned an empty response.'
+            );
         }
 
+        console.log('[Gemini Text]', text);
+
+        let parsed;
+
         try {
-            return JSON.parse(text.trim());
-        } catch (error) {
-            throw new Error(`Failed to parse tracking return as JSON payload: ${error.message}\nRaw response: ${text}`);
+            parsed = JSON.parse(text.trim());
+        } catch (parseError) {
+            throw new Error(
+                `Gemini returned non-JSON:\n${text}`
+            );
         }
+
+        if (parsed?.error) {
+            throw new Error(
+                `Gemini API Error: ${JSON.stringify(parsed.error)}`
+            );
+        }
+
+        return parsed;
+    } catch (error) {
+        console.error(
+            '[GeminiService Error]',
+            error
+        );
+
+        // Gemini quota exceeded
+        if (error?.status === 429) {
+            return {
+                quotaExceeded: true,
+                summary: 'Gemini quota exceeded',
+                recommendedActions: [],
+                confidence: 0
+            };
+        }
+
+        throw error;
     }
+}
 
     /**
      * Generate a structured disaster response plan from current and historical context.
