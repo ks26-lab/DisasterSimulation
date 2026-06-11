@@ -58,10 +58,13 @@ router.get('/docs/:index', async (req, res) => {
  */
 router.get('/health', async (req, res) => {
     try {
-        const health = await elasticService.client.cluster.health();
+        const indices = await elasticService.client.cat.indices({
+            format: 'json'
+        });
+
         res.json({
             status: 'connected',
-            clusterHealth: health
+            indices: indices.length
         });
     } catch (err) {
         res.status(500).json({
