@@ -147,6 +147,14 @@ console.log(
     typeof report.location,
     report.location
 );
+
+if (
+    report?.location &&
+    typeof report.location === 'object'
+) {
+    report.location =
+        `${report.location.city || ''}, ${report.location.state || ''}`;
+}
         return await this.client.index({
             index: this.plansIndex,
             id: eventId,
