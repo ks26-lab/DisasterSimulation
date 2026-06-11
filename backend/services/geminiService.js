@@ -19,12 +19,11 @@ export class GeminiService {
             );
         }
 
-        // Initialize the standard SDK, but override the base API endpoint 
-        // to route through an open, free proxy server.
+        // Initialize the standard SDK, but route traffic through corsproxy.io
+        // This free endpoint strips Render's data-center geofence blocks instantly
         this.ai = new GoogleGenAI({
             apiKey: resolvedApiKey,
-            // Uses a highly reliable open developer proxy to masks Render's data-center IP block
-            baseURL: 'https://cors-anywhere.herokuapp.com/https://generativelanguage.googleapis.com'
+            baseURL: 'https://corsproxy.io/?url=https://generativelanguage.googleapis.com'
         });
 
         this.modelName = modelName || 'gemini-2.5-flash';
