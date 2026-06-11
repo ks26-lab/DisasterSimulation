@@ -65,6 +65,7 @@ AGENTS.forEach(ag => agentStates[ag.id] = 'idle');
 // Asset structures
 const assets = [
   { id: 'hospital', name: "Hospital", floodLevel: 25, population: 500, flooded: false },
+  { id: 'powerGrid', name: "Electric Power Grid", floodLevel: 30, population: 400, flooded: false },
   { id: 'school', name: "School", floodLevel: 35, population: 300, flooded: false },
   { id: 'bridge', name: "Bridge", floodLevel: 45, population: 200, flooded: false }
 ];
@@ -165,8 +166,27 @@ const bridgeEntity = viewer.entities.add({
   }
 });
 
+const powerGridEntity = viewer.entities.add({
+  position: Cesium.Cartesian3.fromDegrees(78.0325, 30.319, 20),
+  box: {
+    dimensions: new Cesium.Cartesian3(180, 60, 40),
+    material: Cesium.Color.ORANGE.withAlpha(0.7),
+    outline: true,
+    outlineColor: Cesium.Color.BLACK
+  },
+  label: {
+    text: "POWER GRID",
+    font: "bold 10px monospace",
+    fillColor: Cesium.Color.WHITE,
+    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+    pixelOffset: new Cesium.Cartesian2(0, -25)
+  }
+});
+
 const assetEntities = {
   hospital: hospitalEntity,
+  powerGrid: powerGridEntity,
   school: schoolEntity,
   bridge: bridgeEntity
 };
@@ -252,7 +272,15 @@ const MOCK_INDEX_COUNTS = {
 // =====================
 function updateClock() {
   const now = new Date();
-  document.getElementById('clock').textContent = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+  const istOptions = {
+    hour12: false,
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  };
+  const istTime = now.toLocaleTimeString('en-GB', istOptions);
+  document.getElementById('clock').textContent = `${istTime} IST`;
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -971,7 +999,14 @@ function renderIntelligenceTab(data) {
 async function runAgentWorkflow(mode) {
   const banner = document.getElementById('running-banner');
   const bannerText = document.getElementById('running-text');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const traceContainer = document.getElementById('agent-traces-container');
+  const tracePlaceholder = `<div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); text-align:center; padding:18px">
+      Refreshing Live Thought Traces...<br>Awaiting workflow results.</div>`;
+  const minLoadDelay = delay(3000);
   
+  loadingOverlay.classList.add('active');
+  traceContainer.innerHTML = tracePlaceholder;
   banner.classList.add('active');
   document.getElementById('trace-badge').textContent = 'COMPUTING';
   document.getElementById('trace-badge').className = 'panel-badge badge-cyan';
@@ -993,6 +1028,8 @@ async function runAgentWorkflow(mode) {
     
     currentResult = MOCK_RESULT;
     renderResults(currentResult);
+    await minLoadDelay;
+    loadingOverlay.classList.remove('active');
     banner.classList.remove('active');
     return;
   }
@@ -1029,6 +1066,7 @@ async function runAgentWorkflow(mode) {
     
     currentResult = data;
     renderResults(data);
+    await minLoadDelay;
   } catch (err) {
     console.error('[workflow-error]', err);
     sequence.forEach(id => agentStates[id] = 'failed');
@@ -1043,7 +1081,7 @@ async function runAgentWorkflow(mode) {
     document.getElementById('trace-badge').className = 'panel-badge badge-crimson';
   }
 
-  banner.classList.remove('active');
+  loadingOverlay.classList.remove('active');
 }
 
 function buildPayload() {
