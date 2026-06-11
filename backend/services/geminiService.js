@@ -14,6 +14,11 @@ export class GeminiService {
     const resolvedApiKey =
         apiKey || process.env.GEMINI_API_KEY;
 
+    console.log(
+        '[GEMINI KEY PREFIX]',
+        process.env.GEMINI_API_KEY?.substring(0, 10)
+    );
+
     if (!resolvedApiKey) {
         throw new Error(
             'Gemini API key is required. Ensure GEMINI_API_KEY is configured.'
