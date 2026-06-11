@@ -1099,24 +1099,26 @@ const agentReport =
             observationReport
         );
 
-console.log(
-    "Historical analysis temporarily disabled during architecture stabilization"
-);
-
-geminiObservationDisplay
-    .textContent =
-    "Backend integrations temporarily disabled";
-console.log(
-    "HISTORICAL SEARCH REPORT"
-);
+const historicalSearchReport =
+    historicalAgent.processReport(
+        agentReport
+    );
 
 console.log(
-    JSON.stringify(
-        historicalSearchReport,
-        null,
-        2
-    )
+    "Historical analysis status",
+    historicalSearchReport ? "enabled" : "disabled"
 );
+
+if (historicalSearchReport) {
+    console.log(
+        "HISTORICAL SEARCH REPORT",
+        JSON.stringify(
+            historicalSearchReport,
+            null,
+            2
+        )
+    );
+}
         
 
 console.log(
@@ -1187,6 +1189,8 @@ if (
 
         riskDisplay.textContent =
             sensors.riskLevel;
+        riskDisplay.className =
+            `status-${sensors.riskLevel.toLowerCase()}`;
 
         populationDisplay
             .textContent =

@@ -1,290 +1,154 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-
-   
-
-    <title>Disaster Simulation</title>
-
-    <style>
-html,
-body,
-#cesiumContainer {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disaster Simulation UI Fixed</title>
+<style>
+:root{
+--primary:#667eea;
+--secondary:#764ba2;
+--text:#1f2937;
+--muted:#6b7280;
+--card-bg:rgba(255,255,255,.96);
+--radius:20px;
+--shadow:0 10px 30px rgba(0,0,0,.15);
 }
-#controlPanel {
-    position: absolute;
-    top: 15px;
-    left: 15px;
-
-    width: 280px;
-
-    background: rgba(255,255,255,0.95);
-
-    padding: 15px;
-
-    border-radius: 12px;
-
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-
-    z-index: 1000;
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+font-family:Segoe UI,sans-serif;
+background:linear-gradient(135deg,#667eea,#764ba2);
+min-height:100vh;
+color:var(--text);
 }
-
-#dashboard {
-    position: absolute;
-
-    top: 15px;
-    right: 15px;
-
-    width: 300px;
-
-    background: rgba(255,255,255,0.95);
-
-    padding: 15px;
-
-    border-radius: 12px;
-
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-
-    z-index: 1000;
+#cesiumContainer{position:fixed;inset:0;z-index:1;}
+.overlay{position:relative;z-index:1000;padding:24px;}
+.hero{
+max-width:1400px;margin:0 auto 24px;
+background:var(--card-bg);
+padding:30px 40px;
+border-radius:24px;
+box-shadow:var(--shadow);
 }
-
-#eventLogDisplay {
-
-    max-height: 150px;
-
-    overflow-y: auto;
-
-    border: 1px solid #ccc;
-
-    padding: 8px;
-
-    font-size: 12px;
-
-    background: #f7f7f7;
+.hero h1{font-size:2.5rem;margin-bottom:10px;}
+.hero p{color:var(--muted);}
+.dashboard-grid{
+display:grid;
+grid-template-columns:320px 1fr 360px;
+gap:24px;
+max-width:1400px;
+margin:auto;
+align-items:start;
 }
-
-#geminiObservation {
-
-    margin-top: 10px;
-
-    padding: 10px;
-
-    border: 1px solid #ccc;
-
-    background: #f8f8f8;
-
-    max-height: 200px;
-
-    overflow-y: auto;
+.right-column{
+display:flex;
+flex-direction:column;
+gap:24px;
 }
-
-#agentPanel {
-
-
-    position: absolute;
-
-    bottom: 15px;
-
-    right: 15px;
-
-    width: 320px;
-
-    background: rgba(255,255,255,0.95);
-
-    padding: 15px;
-
-    border-radius: 12px;
-
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-
-    z-index: 1000;
+.panel{
+background:var(--card-bg);
+padding:24px;
+border-radius:20px;
+box-shadow:var(--shadow);
 }
-
-h3 {
-    margin-top: 0;
+.panel h3{
+margin-bottom:20px;
+padding-bottom:10px;
+border-bottom:2px solid var(--primary);
 }
-
-label {
-    display: block;
-    margin-top: 10px;
-    font-weight: bold;
+.metric{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px;
+margin-bottom:12px;
+background:#fff;
+border-radius:12px;
+border:1px solid #e5e7eb;
 }
-
-input {
-    width: 100%;
-    padding: 8px;
-    box-sizing: border-box;
+label{display:block;margin:14px 0 6px;font-weight:600;}
+input{
+width:100%;
+padding:12px;
+border-radius:10px;
+border:1px solid #dbeafe;
 }
-
-button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 15px;
-    cursor: pointer;
+button{
+width:100%;
+height:48px;
+margin-top:12px;
+border:none;
+border-radius:10px;
+background:linear-gradient(135deg,var(--primary),var(--secondary));
+color:#fff;
+cursor:pointer;
 }
-
-.status-low {
-    color: green;
+.dashboard-panel{min-height:420px;}
+.agent-panel{min-height:520px;}
+.info-box{
+margin-top:12px;
+padding:14px;
+background:#fff;
+border:1px solid #e5e7eb;
+border-radius:12px;
+max-height:180px;
+overflow-y:auto;
 }
-
-.status-medium {
-    color: orange;
+@media(max-width:1200px){
+.dashboard-grid{grid-template-columns:1fr;}
 }
-
-.status-high {
-    color: red;
-}
-
-.status-critical {
-    color: darkred;
-    font-weight: bold;
-}
-
-
 </style>
 </head>
-
 <body>
-     <div id="dashboard">
-
-    <h3>Disaster Dashboard</h3>
-
-    <p>
-        Water Level:
-        <span id="waterDisplay">0</span>
-    </p>
-
-    <p>
-        Risk Level:
-        <span id="riskDisplay">LOW</span>
-    </p>
-
-    <p>
-        Population:
-        <span id="populationDisplay">0</span>
-    </p>
-
-    <p>
-        Recommendation:
-        <span id="recommendationDisplay">
-            None
-        </span>
-    </p>
-
-    <p>
-        Recovery:
-        <span id="recoveryDisplay">
-            No
-        </span>
-    </p>
-    <p>
-    Simulation Time:
-    <span id="timeDisplay">
-        --
-    </span>
-</p>
-
+<div id="cesiumContainer"></div>
+<div class="overlay">
+<div class="hero">
+<h1>Disaster Simulation Command Center</h1>
+<p>Monitor flood risk, population impact and AI observations in real time.</p>
+</div>
+<div class="dashboard-grid">
+<div class="panel">
+<h3>Flood Controls</h3>
+<label>Rainfall (mm/hr)</label>
+<input type="number" id="rainfall" value="50">
+<label>River Flow</label>
+<input type="number" id="riverFlow" value="20">
+<label>Drainage Capacity</label>
+<input type="number" id="drainage" value="10">
+<button id="startBtn">Start Simulation</button>
+<button id="pauseBtn">Pause Simulation</button>
+<button id="resetBtn">Reset Simulation</button>
 </div>
 
-<div id="agentPanel">
-
-    <h3>Observation Agent</h3>
-
-    <p>
-        Trend:
-        <span id="trendDisplay">
-            STABLE
-        </span>
-    </p>
-
-    <p>
-        Latest Event:
-        <span id="eventDisplay">
-            None
-        </span>
-    </p>
-
-    <p>
-        Agent Summary:
-        <span id="summaryDisplay">
-            Waiting...
-        </span>
-    </p>
-    <h4>Event Log</h4>
-
-    <h4>AI Observation</h4>
-
-<div id="geminiObservation">
-    Waiting for observation...
+<div class="panel">
+<h3>Simulation View</h3>
+<p>Cesium simulation canvas will render behind this dashboard.</p>
 </div>
 
-<div id="eventLogDisplay">
-    No events yet
+<div class="right-column">
+<div class="panel dashboard-panel">
+<h3>Disaster Dashboard</h3>
+<div class="metric"><span>Water Level</span><span id="waterDisplay">0</span></div>
+<div class="metric"><span>Risk Level</span><span id="riskDisplay">LOW</span></div>
+<div class="metric"><span>Population</span><span id="populationDisplay">0</span></div>
+<div class="metric"><span>Recommendation</span><span id="recommendationDisplay">None</span></div>
+<div class="metric"><span>Recovery</span><span id="recoveryDisplay">No</span></div>
+<div class="metric"><span>Simulation Time</span><span id="timeDisplay">--</span></div>
+</div>
+
+<div class="panel agent-panel">
+<h3>Observation Agent</h3>
+<div class="metric"><span>Trend</span><span id="trendDisplay">STABLE</span></div>
+<div class="metric"><span>Latest Event</span><span id="eventDisplay">None</span></div>
+<div class="metric"><span>Summary</span><span id="summaryDisplay">Waiting...</span></div>
+<h4>AI Observation</h4>
+<div class="info-box" id="geminiObservation">Waiting for observation...</div>
+<h4 style="margin-top:16px;">Event Log</h4>
+<div class="info-box" id="eventLogDisplay">No events yet</div>
 </div>
 </div>
-
-    <div id="controlPanel">
-
-        <h3>Flood Controls</h3>
-
-        <label>
-            Rainfall (mm/hr)
-        </label>
-
-        <input
-            type="number"
-            id="rainfall"
-            value="50"
-        >
-
-        <label>
-            River Flow
-        </label>
-
-        <input
-            type="number"
-            id="riverFlow"
-            value="20"
-        >
-
-        <label>
-            Drainage Capacity
-        </label>
-
-        <input
-            type="number"
-            id="drainage"
-            value="10"
-        >
-
-        <br><br>
-
-        <button id="startBtn">
-            Start Simulation
-        </button>
-        <button id="pauseBtn">
-        Pause Simulation
-        </button>
-        <button id="resetBtn">
-    Reset Simulation
-</button>
-
-
-    </div>
-
-    <div id="cesiumContainer"></div>
-
-    <script
-        type="module"
-        src="/src/main.js">
-    </script>
-
+</div>
+</div>
+<script type="module" src="/src/main.js"></script>
 </body>
-
 </html>
