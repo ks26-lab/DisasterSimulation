@@ -999,7 +999,14 @@ function renderIntelligenceTab(data) {
 async function runAgentWorkflow(mode) {
   const banner = document.getElementById('running-banner');
   const bannerText = document.getElementById('running-text');
+  const loadingOverlay = document.getElementById('loading-overlay');
+  const traceContainer = document.getElementById('agent-traces-container');
+  const tracePlaceholder = `<div style="font-size:10px; color:var(--text-muted); font-family:var(--font-mono); text-align:center; padding:18px">
+      Refreshing Live Thought Traces...<br>Awaiting workflow results.</div>`;
+  const minLoadDelay = delay(3000);
   
+  loadingOverlay.classList.add('active');
+  traceContainer.innerHTML = tracePlaceholder;
   banner.classList.add('active');
   document.getElementById('trace-badge').textContent = 'COMPUTING';
   document.getElementById('trace-badge').className = 'panel-badge badge-cyan';
@@ -1021,6 +1028,8 @@ async function runAgentWorkflow(mode) {
     
     currentResult = MOCK_RESULT;
     renderResults(currentResult);
+    await minLoadDelay;
+    loadingOverlay.classList.remove('active');
     banner.classList.remove('active');
     return;
   }
@@ -1057,6 +1066,7 @@ async function runAgentWorkflow(mode) {
     
     currentResult = data;
     renderResults(data);
+    await minLoadDelay;
   } catch (err) {
     console.error('[workflow-error]', err);
     sequence.forEach(id => agentStates[id] = 'failed');
@@ -1071,7 +1081,7 @@ async function runAgentWorkflow(mode) {
     document.getElementById('trace-badge').className = 'panel-badge badge-crimson';
   }
 
-  banner.classList.remove('active');
+  loadingOverlay.classList.remove('active');
 }
 
 function buildPayload() {
