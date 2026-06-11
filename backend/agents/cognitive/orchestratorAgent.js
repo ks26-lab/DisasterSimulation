@@ -9,6 +9,13 @@ import { DependencyDiscoveryService } from '../../services/dependencyDiscoverySe
 import { OperationalIntelligenceService } from '../../services/operationalIntelligenceService.js';
 
 /**
+ * Helper utility to pace execution streams and prevent 400/429 concurrency spikes on Gemini Free Tier (5 RPM limit)
+ * @param {number} ms 
+ * @returns {Promise<void>}
+ */
+const pace = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
  * Coordinates the full disaster-response agent workflow end to end.
  */
 export class OrchestratorAgent {
@@ -21,6 +28,7 @@ export class OrchestratorAgent {
      * @param {ReflectionAgent} [dependencies.reflectionAgent]
      * @param {KnowledgeGapDetector} [dependencies.knowledgeGapDetector]
      * @param {DependencyDiscoveryService} [dependencies.dependencyDiscoveryService]
+     * @param {OperationalIntelligenceService} [dependencies.operationalIntelligenceService]
      */
     constructor({
         elasticService = new ElasticSearchService(),
@@ -62,17 +70,17 @@ export class OrchestratorAgent {
             },
         };
 
-        const retrievalResult =
-            await this.historicalRetrievalAgent.retrieve(report);
+        const retrievalResult = await this.historicalRetrievalAgent.retrieve(report);
         const historicalMatches = retrievalResult.matches;
+
+        // Give a minor delay before calling the next agent to stagger API usage
+        await pace(1000);
 
         const generatedPlan = await this.planningAgent.generatePlan(
             report,
             historicalMatches
         );
 
-        // Keep behavior consistent, but store plan in plansIndex rather than outcomesIndex
-        // in order to respect the separation of concerns requirement
         await this.elasticService.storePlan({
             eventId,
             report,
@@ -145,24 +153,31 @@ export class OrchestratorAgent {
         workflowTrace.timestamps.retrievalFinished = new Date().toISOString();
         const historicalMatches = retrievalResult.matches || [];
 
-        // Compute retrieval quality (similarity score of the best match, or 0.5 default)
         const retrievalQuality = historicalMatches.length > 0 ? historicalMatches[0].similarity : 0.5;
 
-        // Fetch corresponding historical plans and outcomes for LearningAgent
         const historicalEventIds = historicalMatches
             .map((m) => m.source?.metadata?.eventId)
             .filter(Boolean);
 
-        const [historicalPlans, historicalOutcomes, strategyMemory, detectedGaps, discoveredDependencies, operationalIntelligence] = await Promise.all([
+        // Keep local DB and Elastic lookups asynchronous (parallelized)
+        const [historicalPlans, historicalOutcomes, strategyMemory] = await Promise.all([
             this.elasticService.getPlansByEventIds(historicalEventIds),
             this.elasticService.getOutcomesByEventIds(historicalEventIds),
             this.elasticService.searchStrategies({ disasterType: report.disaster?.type }).catch(() => []),
-            this.knowledgeGapDetector.detectGaps(report, historicalMatches).catch(() => null),
-            this.dependencyDiscoveryService.discoverAndStoreDependencies(report, historicalMatches).catch(() => null),
-            this.operationalIntelligenceService.generateIntelligence(report).catch(() => null),
         ]);
 
+        // Stagger downstream LLM evaluations to satisfy the 5 requests-per-minute threshold
+        await pace(1500);
+        const detectedGaps = await this.knowledgeGapDetector.detectGaps(report, historicalMatches).catch(() => null);
+        
+        await pace(1500);
+        const discoveredDependencies = await this.dependencyDiscoveryService.discoverAndStoreDependencies(report, historicalMatches).catch(() => null);
+        
+        await pace(1500);
+        const operationalIntelligence = await this.operationalIntelligenceService.generateIntelligence(report).catch(() => null);
+
         // 2. Learning Agent
+        await pace(1500);
         workflowTrace.timestamps.learningStarted = new Date().toISOString();
         const rawLearningInsights = await this.learningAgent.learn(
             historicalMatches.map((m) => m.source),
@@ -179,7 +194,8 @@ export class OrchestratorAgent {
         };
         workflowTrace.timestamps.learningFinished = new Date().toISOString();
 
-        // 3. Planning Agent (with learning insights)
+        // 3. Planning Agent (with learning insights compiled)
+        await pace(1500);
         workflowTrace.timestamps.planningStarted = new Date().toISOString();
         const generatedPlan = await this.planningAgent.generatePlan(
             report,
@@ -189,6 +205,7 @@ export class OrchestratorAgent {
         workflowTrace.timestamps.planningFinished = new Date().toISOString();
 
         // 4. Reflection Agent
+        await pace(1500);
         workflowTrace.timestamps.reflectionStarted = new Date().toISOString();
         const reflection = await this.reflectionAgent.reviewPlan(
             report,
@@ -197,7 +214,7 @@ export class OrchestratorAgent {
         );
         workflowTrace.timestamps.reflectionFinished = new Date().toISOString();
 
-        // 5. Compute overall confidence
+        // 5. Compute overall confidence metrics
         const lConf = learningInsights.confidence ?? 0.8;
         const pConf = generatedPlan.confidence ?? 0.8;
         const rConf = reflection.confidence ?? 0.8;
@@ -208,6 +225,7 @@ export class OrchestratorAgent {
         const confidencePenalty = operationalIntelligence?.confidencePenalty ?? 0;
         overallConfidence = Math.max(0, Number((overallConfidence - confidencePenalty).toFixed(4)));
 
+        // 6. Persistence Layers
         await this.elasticService.storePlan({
             eventId,
             report,
@@ -220,7 +238,6 @@ export class OrchestratorAgent {
             createdAt: new Date().toISOString(),
         });
 
-        // 7. Store Recommendation Audit Layer
         await this.elasticService.storeRecommendationAudit({
             eventId,
             event: report,

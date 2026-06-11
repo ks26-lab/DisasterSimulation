@@ -1,28 +1,76 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { VertexAI } from '@google-cloud/vertexai';
 import { GEMINI } from '../config/index.js';
+import path from 'path';
+import fs from 'fs';
+
+// ============================================================================
+// ENVIRONMENT AUTHENTICATION LAYER (DYNAMIC FOR LOCAL & RENDER PRODUCTION)
+// ============================================================================
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+    // Production (Render Environment Variables Setup)
+    try {
+        fs.writeFileSync('/tmp/google-creds.json', process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+        process.env.GOOGLE_APPLICATION_CREDENTIALS = '/tmp/google-creds.json';
+    } catch (err) {
+        console.error('[Vertex Setup Error] Failed to write temporary credentials disk file:', err.message);
+    }
+} else {
+    // Local Development Default Pathing Configuration
+    process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve('./project-credentials.json');
+}
 
 /**
- * Server-side Gemini integration for disaster response planning.
+ * Server-side Vertex AI (Gemini) integration for disaster response planning.
+ * Resolves location/datacenter block policies natively by shifting to Vertex.
  */
 export class GeminiService {
     /**
-     * @param {string} [apiKey]
+     * @param {string} [gcpProjectId]
      * @param {string} [modelName]
      */
-    constructor(apiKey = GEMINI.apiKey, modelName = GEMINI.model) {
-        if (!apiKey) {
+    constructor(gcpProjectId = null, modelName = GEMINI.model) {
+        if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !gcpProjectId) {
             throw new Error(
-                'Gemini API key is required. Set GEMINI_API_KEY or VITE_GEMINI_API_KEY.'
+                'Vertex Authentication setup is incomplete. Ensure project-credentials.json exists locally or GOOGLE_APPLICATION_CREDENTIALS_JSON is configured on Render.'
             );
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        this.model = genAI.getGenerativeModel({
-            model: modelName,
+        // Initialize Vertex Client Framework
+        const vertexAI = new VertexAI({ 
+            project: gcpProjectId || 'luminous-slice-429713-d9', 
+            location: 'us-central1' 
+        });
+
+        // Initialize model target with system-configured properties
+        this.model = vertexAI.getGenerativeModel({
+            model: modelName || 'gemini-2.5-flash',
             generationConfig: {
                 responseMimeType: 'application/json',
             },
         });
+    }
+
+    /**
+     * Helper to safely execute model generations and parse response content
+     * @private
+     */
+    async _generateAndParse(prompt) {
+        const result = await this.model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
+
+        const candidate = result.response?.candidates?.[0];
+        const text = candidate?.content?.parts?.[0]?.text;
+
+        if (!text) {
+            throw new Error('Received empty generation contents chunk from Vertex API service layer.');
+        }
+
+        try {
+            return JSON.parse(text.trim());
+        } catch (error) {
+            throw new Error(`Failed to parse Vertex tracking execution return as JSON payload: ${error.message}\nRaw response: ${text}`);
+        }
     }
 
     /**
@@ -78,16 +126,9 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini planning response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini planning response as JSON: ${error.message}`);
+        });
     }
 
     /**
@@ -130,16 +171,9 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini reflection response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini reflection response as JSON: ${error.message}`);
+        });
     }
 
     /**
@@ -182,16 +216,9 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini learning response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini learning response as JSON: ${error.message}`);
+        });
     }
 
     /**
@@ -229,16 +256,9 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini counterfactual response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini counterfactual response as JSON: ${error.message}`);
+        });
     }
 
     /**
@@ -277,16 +297,9 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini knowledge gap response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini knowledge gap response as JSON: ${error.message}`);
+        });
     }
 
     /**
@@ -328,15 +341,8 @@ Return JSON with this exact structure:
 }
 `;
 
-        const result = await this.model.generateContent(prompt);
-        const text = result.response.text();
-
-        try {
-            return JSON.parse(text);
-        } catch (error) {
-            throw new Error(
-                `Failed to parse Gemini dependency response as JSON: ${error.message}`
-            );
-        }
+        return this._generateAndParse(prompt).catch(error => {
+            throw new Error(`Failed to parse Gemini dependency response as JSON: ${error.message}`);
+        });
     }
 }
