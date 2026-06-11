@@ -584,6 +584,44 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 16, 0.82);
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.loading-screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.loading-screen-inner {
+  width: min(520px, calc(100% - 40px));
+  padding: 24px 26px;
+  border-radius: 18px;
+  background: rgba(12, 16, 26, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+.loading-screen-title {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.loading-screen-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
 /* Center Tabs (inside OPS View HUD or panel) */
 .center-tabs-hud {
   pointer-events: auto;

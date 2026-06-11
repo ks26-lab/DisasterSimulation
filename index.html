@@ -34,7 +34,7 @@
           </span>
         </label>
         <span>BACKEND: <span style="color:var(--primary)" id="backend-url">localhost:3000</span></span>
-        <span class="clock" id="clock">--:--:-- UTC</span>
+        <span class="clock" id="clock">--:--:-- IST</span>
       </div>
     </header>
 
@@ -143,7 +143,7 @@
 
             <div class="slider-row">
               <div class="slider-header">
-                <span class="slider-label">Affected Pop.</span>
+                <span class="slider-label">Current Population</span>
                 <span class="slider-val" id="pop-aff-val">0</span>
               </div>
               <div class="slider-container">
@@ -290,6 +290,10 @@
                 <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
               </div>
               <div class="cascade-node ok">
+                <span style="flex:1">Electric Power Grid</span>
+                <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
+              </div>
+              <div class="cascade-node ok">
                 <span style="flex:1">Educational Facilities</span>
                 <span style="font-size:10px; color:var(--text-muted)">STATUS: NOMINAL</span>
               </div>
@@ -418,6 +422,14 @@
 
     </main>
 
+  </div>
+
+  <div class="loading-screen" id="loading-overlay">
+    <div class="loading-screen-inner">
+      <div class="spinner"></div>
+      <div class="loading-screen-title">Starting workflow...</div>
+      <div class="loading-screen-text">Refreshing Live Thought Traces and executing the agent pipeline.</div>
+    </div>
   </div>
 
   <div class="tooltip" id="tooltip"></div>
