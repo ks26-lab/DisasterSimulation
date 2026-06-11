@@ -279,8 +279,15 @@ function updateClock() {
     minute: '2-digit',
     second: '2-digit'
   };
+  const dateOptions = {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  };
   const istTime = now.toLocaleTimeString('en-GB', istOptions);
-  document.getElementById('clock').textContent = `${istTime} IST`;
+  const istDate = now.toLocaleDateString('en-GB', dateOptions);
+  document.getElementById('clock').textContent = `${istDate} · ${istTime} IST`;
 }
 setInterval(updateClock, 1000);
 updateClock();
